@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.enterprise.starter</groupId>
+    <artifactId>order-management-parent</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <name>Order Management Enterprise Starter (Parent)</name>
+    <description>
+        Micronaut 4 + Java 25 (virtual threads) DDD / Hexagonal reference service.
+        Serves as the master template for new enterprise bounded contexts.
+    </description>
+
+    <modules>
+        <module>order-domain</module>
+        <module>order-application</module>
+        <module>order-adapter-rest</module>
+        <module>order-adapter-persistence</module>
+        <module>order-bootstrap</module>
+        <module>architecture-tests</module>
+    </modules>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+        <!-- Toolchain -->
+        <maven.compiler.release>25</maven.compiler.release>
+        <java.version>25</java.version>
+
+        <!-- Conventional root package used by every bounded context. -->
+        <base.package>com.enterprise.starter.order</base.package>
+
+        <!-- BOM / library versions -->
+        <micronaut.version>4.10.0</micronaut.version>
+        <micronaut.core.version>4.10.7</micronaut.core.version>
+        <micronaut.data.version>4.14.0</micronaut.data.version>
+        <micronaut.serialization.version>2.17.0</micronaut.serialization.version>
+        <micronaut.openapi.version>6.19.0</micronaut.openapi.version>
+
+        <archunit.version>1.4.1</archunit.version>
+        <archguard.version>0.1.0</archguard.version>
+        <junit.version>5.11.4</junit.version>
+        <assertj.version>3.27.3</assertj.version>
+        <mockito.version>5.14.2</mockito.version>
+        <slf4j.version>2.0.16</slf4j.version>
+        <logback.version>1.5.16</logback.version>
+
+        <flyway.version>11.3.0</flyway.version>
+        <h2.version>2.3.232</h2.version>
+        <postgresql.version>42.7.5</postgresql.version>
+        <jakarta.inject.version>2.0.1</jakarta.inject.version>
+
+        <!-- Plugin versions -->
+        <maven.compiler.plugin.version>3.13.0</maven.compiler.plugin.version>
+        <maven.surefire.plugin.version>3.5.2</maven.surefire.plugin.version>
+        <maven.failsafe.plugin.version>3.5.2</maven.failsafe.plugin.version>
+        <maven.jar.plugin.version>3.4.2</maven.jar.plugin.version>
+        <maven.shade.plugin.version>3.6.0</maven.shade.plugin.version>
+        <micronaut.maven.plugin.version>4.9.0</micronaut.maven.plugin.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- Micronaut platform BOM pulls aligned versions for everything we touch. -->
+            <dependency>
+                <groupId>io.micronaut.platform</groupId>
+                <artifactId>micronaut-platform</artifactId>
+                <version>${micronaut.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- Internal modules -->
+            <dependency>
+                <groupId>com.enterprise.starter</groupId>
+                <artifactId>order-domain</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.enterprise.starter</groupId>
+                <artifactId>order-application</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.enterprise.starter</groupId>
+                <artifactId>order-adapter-rest</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.enterprise.starter</groupId>
+                <artifactId>order-adapter-persistence</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.enterprise.starter</groupId>
+                <artifactId>order-bootstrap</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- Explicit JSR-330 pin (not managed by the Micronaut platform BOM today). -->
+            <dependency>
+                <groupId>jakarta.inject</groupId>
+                <artifactId>jakarta.inject-api</artifactId>
+                <version>${jakarta.inject.version}</version>
+            </dependency>
+
+            <!-- Testing -->
+            <dependency>
+                <groupId>org.junit</groupId>
+                <artifactId>junit-bom</artifactId>
+                <version>${junit.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.assertj</groupId>
+                <artifactId>assertj-core</artifactId>
+                <version>${assertj.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-core</artifactId>
+                <version>${mockito.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.tngtech.archunit</groupId>
+                <artifactId>archunit-junit5</artifactId>
+                <version>${archunit.version}</version>
+                <scope>test</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- Everybody gets SLF4J API (no binding) + logback at runtime from the bootstrap module. -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+
+        <!-- Default test harness for every module -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>${maven.compiler.plugin.version}</version>
+                    <configuration>
+                        <release>${maven.compiler.release}</release>
+                        <parameters>true</parameters>
+                        <compilerArgs>
+                            <arg>-Xlint:all</arg>
+                        </compilerArgs>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>${maven.surefire.plugin.version}</version>
+                    <configuration>
+                        <!-- Surface test output so CI logs show the actual server stack trace. -->
+                        <redirectTestOutputToFile>false</redirectTestOutputToFile>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-failsafe-plugin</artifactId>
+                    <version>${maven.failsafe.plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>${maven.jar.plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>io.micronaut.maven</groupId>
+                    <artifactId>micronaut-maven-plugin</artifactId>
+                    <version>${micronaut.maven.plugin.version}</version>
+                </plugin>
+                <!--
+                    ArchGuard — offline, evidence-based hexagonal/DDD policy enforcement.
+                    The architecture-tests module hosts ArchUnit tests only and emits no production
+                    classes, so it is excluded from the reactor analysis. The ArchUnit tests still
+                    run as part of `mvn verify`; ArchGuard enforces the same invariants from the
+                    compiled bytecode of every other module.
+                -->
+                <plugin>
+                    <groupId>io.archguard</groupId>
+                    <artifactId>archguard-maven-plugin</artifactId>
+                    <version>${archguard.version}</version>
+                    <configuration>
+                        <excludedModules>
+                            <excludedModule>com.enterprise.starter:architecture-tests</excludedModule>
+                        </excludedModules>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>

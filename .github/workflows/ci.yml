@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Build, test, and architecture guard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+          cache: maven
+
+      - name: Show toolchain
+        run: |
+          java --version
+          mvn --version
+
+      - name: Run full Maven verify
+        env:
+          MAVEN_OPTS: >-
+            -Dstyle.color=always
+            -Djansi.force=true
+        run: mvn -B -ntp verify
+
+      # ArchGuard adds a second, independent architecture gate on top of the ArchUnit
+      # tests in the architecture-tests module. The ArchUnit tests enforce the policy
+      # through Java-side assertions; ArchGuard enforces the same policy declaratively
+      # from the compiled bytecode of the full reactor, with deterministic fingerprints,
+      # HTML / JSON / SARIF reports, and baseline support. Both must pass for the build
+      # to succeed.
+      #
+      # ArchGuard 0.1.0 is not yet published to Maven Central. Point ARCHGUARD_REPO at
+      # a build of the SDK; the step below checks it out, installs it to the runner's
+      # local repository, and then runs the reactor check against this project. When
+      # the SDK is published, drop the two preparatory steps and keep only the final
+      # `mvn ...:check-reactor` invocation.
+      - name: Check out ArchGuard SDK sources
+        if: ${{ env.ARCHGUARD_REPO != '' }}
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.ARCHGUARD_REPO }}
+          ref: ${{ env.ARCHGUARD_REF || 'main' }}
+          path: .archguard-sdk
+
+      - name: Install ArchGuard SDK locally
+        if: ${{ env.ARCHGUARD_REPO != '' }}
+        working-directory: .archguard-sdk
+        run: mvn -B -ntp -DskipTests install
+
+      - name: Run ArchGuard reactor check
+        if: ${{ env.ARCHGUARD_REPO != '' }}
+        run: mvn -B -ntp io.archguard:archguard-maven-plugin:0.1.0:check-reactor
+
+      - name: Upload surefire reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: '**/target/surefire-reports/*'
+          retention-days: 7
+
+      - name: Upload ArchGuard report
+        if: always() && env.ARCHGUARD_REPO != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: archguard-report
+          path: target/archguard/*
+          retention-days: 14

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.enterprise.starter</groupId>
+        <artifactId>order-management-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>architecture-tests</artifactId>
+    <name>Order Management :: Architecture Tests</name>
+    <description>
+        ArchUnit guardrails. Imports every module (test scope) and fails the build
+        when the DDD / hexagonal rules are violated. Runs as part of `mvn verify`.
+    </description>
+
+    <dependencies>
+        <!-- Pull every production module so ArchUnit can introspect their classes. -->
+        <dependency>
+            <groupId>com.enterprise.starter</groupId>
+            <artifactId>order-domain</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.enterprise.starter</groupId>
+            <artifactId>order-application</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.enterprise.starter</groupId>
+            <artifactId>order-adapter-rest</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.enterprise.starter</groupId>
+            <artifactId>order-adapter-persistence</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.enterprise.starter</groupId>
+            <artifactId>order-bootstrap</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.tngtech.archunit</groupId>
+            <artifactId>archunit-junit5</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- Make sure these rules execute on `mvn verify`. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <includes>
+                        <include>**/*Test.java</include>
+                        <include>**/*Rules.java</include>
+                    </includes>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

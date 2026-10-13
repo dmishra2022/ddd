@@ -1,0 +1,48 @@
+micronaut:
+  application:
+    name: order-management
+  # Run controller methods on blocking-capable (virtual) threads so each request
+  # gets its own Loom-scheduled thread rather than tying up an event-loop thread.
+  server:
+    thread-selection: BLOCKING
+    port: 8080
+  executors:
+    # Default IO executor used by Micronaut for blocking I/O. Virtual thread
+    # per task: unbounded concurrency, cheap context switches, friendly to
+    # JDBC and remote-service clients.
+    io:
+      virtual: true
+    blocking:
+      virtual: true
+
+jackson:
+  serialization:
+    writeDatesAsTimestamps: false
+
+flyway:
+  datasources:
+    default:
+      enabled: true
+      locations: classpath:db/migration
+
+endpoints:
+  health:
+    enabled: true
+    sensitive: false
+    details-visible: ANONYMOUS
+
+logger:
+  levels:
+    com.enterprise.starter.order: INFO
+
+# Default (base) datasource is an in-memory H2 running in PostgreSQL compatibility
+# mode so the Micronaut Data JDBC repositories (compiled with POSTGRES dialect)
+# work identically in dev, test, and prod. The prod profile overrides these with
+# real PostgreSQL coordinates.
+datasources:
+  default:
+    url: jdbc:h2:mem:orders;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+    dialect: POSTGRES

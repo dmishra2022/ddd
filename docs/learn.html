@@ -1,0 +1,2232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Order Management: A Primer on Domain-Driven Design and Hexagonal Architecture</title>
+<style>
+/* ========== Reset ========== */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+img, svg { max-width: 100%; display: block; }
+button { font: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+a { color: inherit; text-decoration: none; }
+
+/* ========== Typography ========== */
+:root {
+  --paper: #f6f3ee;
+  --paper-raised: #fbf8f2;
+  --ink: #1a1a1a;
+  --ink-soft: #4a4740;
+  --ink-faint: #8a8378;
+  --rule: #c9bfaf;
+  --rule-soft: #e4ddce;
+  --accent-burgundy: #6b2d2b;
+  --accent-teal: #1f4a52;
+  --accent-ochre: #a8761a;
+  --accent-forest: #3a5c3a;
+  --code-bg: #efeae0;
+  --code-fg: #2a2622;
+  --code-keyword: #6b2d2b;
+  --code-string: #1f4a52;
+  --code-comment: #8a8378;
+  --code-annotation: #a8761a;
+  --panel-bg: #ede6d7;
+  --wrong-bg: #f3e4e0;
+  --right-bg: #e3ebe0;
+  --font-serif: "Charter", "Iowan Old Style", "Palatino Linotype", "Georgia", serif;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+html { font-size: 16px; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-serif);
+  line-height: 1.65;
+  font-size: 1.0625rem;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4, h5, h6, .eyebrow, nav, button, .ui, .tab, .caption, .kbd, .pill {
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv11";
+}
+
+/* ========== Layout ========== */
+.layout {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100vh;
+  overflow-y: auto;
+  padding: 2.25rem 1.5rem 2rem 2rem;
+  border-right: 1px solid var(--rule);
+  background: var(--paper-raised);
+}
+
+main {
+  padding: 3.5rem 4.5rem 6rem;
+  max-width: 920px;
+}
+
+/* ========== Sidebar ========== */
+.sidebar-title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin: 0 0 1.75rem 0;
+  color: var(--ink);
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 1rem;
+}
+
+.sidebar nav ol {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  counter-reset: toc;
+}
+
+.sidebar nav li {
+  margin: 0.1rem 0;
+}
+
+.sidebar nav a {
+  display: block;
+  padding: 0.3rem 0.5rem 0.3rem 0.75rem;
+  font-size: 0.86rem;
+  color: var(--ink-soft);
+  border-left: 2px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.sidebar nav a:hover {
+  color: var(--ink);
+  background: var(--rule-soft);
+}
+
+.sidebar nav a.active {
+  color: var(--accent-burgundy);
+  border-left-color: var(--accent-burgundy);
+  background: var(--rule-soft);
+  font-weight: 600;
+}
+
+.sidebar nav .toc-group {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  padding: 1.25rem 0.5rem 0.35rem 0.75rem;
+}
+
+/* ========== Masthead ========== */
+.masthead {
+  margin-bottom: 4rem;
+  padding-bottom: 2.5rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.eyebrow {
+  font-size: 0.72rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--accent-burgundy);
+  margin: 0 0 1rem 0;
+  font-weight: 600;
+}
+
+h1.title {
+  font-family: var(--font-serif);
+  font-size: 3rem;
+  line-height: 1.1;
+  font-weight: 700;
+  margin: 0 0 1.5rem 0;
+  letter-spacing: -0.015em;
+}
+
+h1.title em {
+  font-style: italic;
+  color: var(--accent-burgundy);
+  font-weight: 400;
+}
+
+.deck {
+  font-size: 1.3rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  max-width: 36em;
+  margin: 0 0 2rem 0;
+  font-family: var(--font-serif);
+}
+
+.masthead .meta {
+  display: flex;
+  gap: 2rem;
+  font-size: 0.82rem;
+  color: var(--ink-faint);
+  font-family: var(--font-sans);
+}
+.masthead .meta span strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* ========== Sections ========== */
+section {
+  margin: 5rem 0;
+  scroll-margin-top: 2rem;
+}
+
+h2.chapter {
+  font-size: 2rem;
+  margin: 0 0 2rem 0;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--ink);
+}
+
+h2.chapter .numeral {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent-burgundy);
+  font-weight: 600;
+}
+
+h3 {
+  font-size: 1.35rem;
+  margin: 2.5rem 0 1rem 0;
+  line-height: 1.3;
+  font-weight: 600;
+}
+
+h4 {
+  font-size: 1.05rem;
+  margin: 1.75rem 0 0.5rem 0;
+  font-weight: 600;
+  color: var(--accent-teal);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.82rem;
+}
+
+p { margin: 0 0 1.1rem 0; }
+p + p { text-indent: 1.5em; }
+p + p.noindent, p.lede, .panel p + p, .callout p + p { text-indent: 0; }
+
+p.lede {
+  font-size: 1.2rem;
+  line-height: 1.55;
+  color: var(--ink);
+  margin-bottom: 1.75rem;
+}
+
+/* Drop cap on first paragraph of chapters */
+.chapter-body > p:first-of-type::first-letter {
+  float: left;
+  font-family: var(--font-serif);
+  font-size: 3.75rem;
+  line-height: 0.9;
+  padding: 0.4rem 0.5rem 0 0;
+  font-weight: 700;
+  color: var(--accent-burgundy);
+}
+
+/* Inline styling */
+strong { font-weight: 700; color: var(--ink); }
+em { font-style: italic; }
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  background: var(--code-bg);
+  padding: 0.1em 0.35em;
+  border-radius: 2px;
+  color: var(--code-fg);
+}
+
+/* ========== Code blocks ========== */
+pre {
+  background: var(--code-bg);
+  color: var(--code-fg);
+  padding: 1.25rem 1.5rem;
+  margin: 1.5rem 0;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  border-left: 3px solid var(--accent-burgundy);
+  border-radius: 2px;
+  tab-size: 4;
+}
+
+pre code {
+  background: transparent;
+  padding: 0;
+  font-size: inherit;
+}
+
+.k { color: var(--code-keyword); font-weight: 600; }
+.s { color: var(--code-string); }
+.c { color: var(--code-comment); font-style: italic; }
+.a { color: var(--code-annotation); }
+.t { color: var(--accent-teal); }
+
+.code-caption {
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+  margin-top: -1rem;
+  margin-bottom: 1.5rem;
+  padding-left: 0.25rem;
+  letter-spacing: 0.02em;
+}
+
+/* ========== Callouts ========== */
+.callout {
+  border-left: 3px solid var(--accent-ochre);
+  background: #f4ecd8;
+  padding: 1.1rem 1.4rem;
+  margin: 1.75rem 0;
+  font-size: 0.98em;
+}
+
+.callout .callout-label {
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-ochre);
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.callout.insight { border-color: var(--accent-teal); background: #e4ecee; }
+.callout.insight .callout-label { color: var(--accent-teal); }
+
+.callout.warning { border-color: var(--accent-burgundy); background: #f0e2e0; }
+.callout.warning .callout-label { color: var(--accent-burgundy); }
+
+/* ========== Figures and diagrams ========== */
+figure {
+  margin: 2.5rem 0;
+  padding: 1.75rem;
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+}
+
+figure svg { margin: 0 auto; display: block; max-width: 100%; height: auto; }
+
+figcaption {
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+  margin-top: 1.25rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--rule);
+  text-align: center;
+  font-style: italic;
+}
+
+figcaption .figure-label {
+  font-weight: 700;
+  font-style: normal;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  color: var(--accent-burgundy);
+  margin-right: 0.5rem;
+}
+
+/* ========== Tabs ========== */
+.tabs {
+  margin: 1.75rem 0;
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+}
+
+.tab-list {
+  display: flex;
+  border-bottom: 1px solid var(--rule);
+  background: var(--rule-soft);
+}
+
+.tab {
+  padding: 0.75rem 1.25rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  border-bottom: 3px solid transparent;
+  letter-spacing: 0.02em;
+  transition: all 0.15s ease;
+}
+
+.tab:hover { color: var(--ink); background: var(--paper-raised); }
+
+.tab.active {
+  color: var(--accent-burgundy);
+  border-bottom-color: var(--accent-burgundy);
+  background: var(--paper-raised);
+}
+
+.tab-panels {
+  padding: 0;
+}
+
+.tab-panel { display: none; padding: 1.25rem 1.5rem; }
+.tab-panel.active { display: block; }
+
+.tab-panel pre { margin-top: 0; margin-bottom: 0; border: none; padding-left: 0; border-left: none; }
+
+/* ========== Toggle: wrong-way / right-way ========== */
+.compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin: 1.75rem 0;
+}
+
+.compare .side {
+  padding: 1.25rem 1.5rem;
+  border-radius: 2px;
+  border: 1px solid var(--rule);
+}
+
+.compare .side.wrong { background: var(--wrong-bg); border-color: #c99a93; }
+.compare .side.right { background: var(--right-bg); border-color: #9bbd92; }
+
+.compare .side h5 {
+  margin: 0 0 0.75rem 0;
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.compare .side.wrong h5 { color: var(--accent-burgundy); }
+.compare .side.right h5 { color: var(--accent-forest); }
+
+.compare pre { margin: 0.5rem 0 0.75rem 0; background: rgba(255,255,255,0.5); border-left-width: 2px; }
+.compare .side.wrong pre { border-left-color: var(--accent-burgundy); }
+.compare .side.right pre { border-left-color: var(--accent-forest); }
+
+.compare .side p { font-size: 0.92rem; margin: 0.5rem 0 0 0; color: var(--ink-soft); }
+
+/* ========== Flow stepper ========== */
+.stepper {
+  margin: 2rem 0;
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  padding: 1.5rem 1.75rem;
+  border-radius: 2px;
+}
+
+.stepper-nav {
+  display: flex;
+  gap: 0;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--rule);
+  overflow-x: auto;
+}
+
+.step-button {
+  padding: 0.6rem 0.9rem;
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+  border-bottom: 3px solid transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  min-width: fit-content;
+  transition: all 0.15s ease;
+}
+
+.step-button .step-num {
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  font-weight: 700;
+}
+
+.step-button .step-label {
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.step-button:hover .step-label { color: var(--ink); }
+.step-button:hover { background: var(--rule-soft); }
+
+.step-button.active {
+  border-bottom-color: var(--accent-burgundy);
+  background: var(--rule-soft);
+}
+
+.step-button.active .step-num { color: var(--accent-burgundy); }
+.step-button.active .step-label { color: var(--accent-burgundy); }
+
+.step-content { display: none; }
+.step-content.active { display: block; }
+
+.step-content h4 {
+  margin-top: 0;
+  color: var(--accent-burgundy);
+  font-size: 1rem;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.step-content pre { margin-top: 0.75rem; }
+
+/* ========== Reveal (details) ========== */
+details.reveal {
+  margin: 1.5rem 0;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  padding: 0;
+  background: var(--paper-raised);
+}
+
+details.reveal summary {
+  padding: 0.9rem 1.25rem;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ink);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+details.reveal summary::-webkit-details-marker { display: none; }
+
+details.reveal summary::before {
+  content: "+";
+  display: inline-block;
+  width: 1.2rem;
+  color: var(--accent-burgundy);
+  font-weight: 700;
+  font-size: 1.1rem;
+  text-align: center;
+  transition: transform 0.2s ease;
+}
+
+details.reveal[open] summary::before { content: "−"; }
+
+details.reveal .body { padding: 0 1.5rem 1.25rem; }
+details.reveal .body > *:first-child { margin-top: 0; }
+
+/* ========== Pills ========== */
+.pill {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  background: var(--rule-soft);
+  color: var(--ink-soft);
+  border-radius: 10px;
+  border: 1px solid var(--rule);
+  margin-right: 0.35rem;
+}
+
+.pill.domain { background: #e8d9c8; color: var(--accent-burgundy); border-color: #c8a98a; }
+.pill.application { background: #d9e3d9; color: var(--accent-forest); border-color: #a8c3a8; }
+.pill.adapter { background: #d9e4e6; color: var(--accent-teal); border-color: #a0bec3; }
+.pill.bootstrap { background: #f0e3cc; color: var(--accent-ochre); border-color: #d4b47f; }
+.pill.tests { background: #e8e4da; color: var(--ink-soft); border-color: var(--rule); }
+
+/* ========== Hexagon layer colors ========== */
+.layer-domain { fill: #e8d9c8; stroke: #6b2d2b; }
+.layer-application { fill: #d9e3d9; stroke: #3a5c3a; }
+.layer-adapter { fill: #d9e4e6; stroke: #1f4a52; }
+.layer-bootstrap { fill: #f0e3cc; stroke: #a8761a; }
+
+/* Interactive hexagon */
+.hex-interactive g.layer { cursor: pointer; transition: opacity 0.2s ease; }
+.hex-interactive g.layer:hover { opacity: 0.75; }
+.hex-interactive g.layer.dimmed { opacity: 0.25; }
+
+.hex-detail {
+  margin-top: 1rem;
+  padding: 1rem 1.25rem;
+  background: var(--paper);
+  border-left: 3px solid var(--accent-burgundy);
+  min-height: 90px;
+  transition: all 0.2s ease;
+}
+
+.hex-detail h5 {
+  margin: 0 0 0.4rem 0;
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.hex-detail p { margin: 0; font-size: 0.9rem; color: var(--ink-soft); }
+
+/* ========== Tables ========== */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.75rem 0;
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+}
+
+thead {
+  background: var(--rule-soft);
+  border-bottom: 2px solid var(--ink);
+}
+
+th, td {
+  text-align: left;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+
+th {
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+td code { font-size: 0.82em; }
+
+/* ========== Blockquote (ubiquitous language) ========== */
+blockquote {
+  margin: 2rem 0;
+  padding: 0 0 0 2rem;
+  border-left: 3px solid var(--accent-ochre);
+  font-style: italic;
+  color: var(--ink-soft);
+  font-size: 1.1rem;
+}
+
+blockquote cite {
+  display: block;
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+  font-style: normal;
+  font-family: var(--font-sans);
+  color: var(--ink-faint);
+}
+blockquote cite::before { content: "— "; }
+
+/* ========== Lists ========== */
+ul, ol { padding-left: 1.4rem; margin: 1rem 0 1.5rem; }
+li { margin: 0.35rem 0; }
+
+ol.steps {
+  counter-reset: step;
+  padding-left: 0;
+  list-style: none;
+}
+ol.steps > li {
+  counter-increment: step;
+  position: relative;
+  padding-left: 2.75rem;
+  margin: 1rem 0;
+}
+ol.steps > li::before {
+  content: counter(step, decimal-leading-zero);
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--accent-burgundy);
+  letter-spacing: 0.05em;
+}
+
+/* ========== Nav footer / print ========== */
+footer.colophon {
+  margin-top: 6rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+  font-family: var(--font-sans);
+}
+
+/* ========== Glossary ========== */
+dl.glossary {
+  margin: 2rem 0;
+  display: grid;
+  grid-template-columns: minmax(10rem, 14rem) 1fr;
+  column-gap: 2.25rem;
+  row-gap: 0.4rem;
+}
+
+dl.glossary dt {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--accent-burgundy);
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--rule-soft);
+}
+
+dl.glossary dd {
+  margin: 0;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--rule-soft);
+  color: var(--ink);
+  font-size: 0.97rem;
+  line-height: 1.55;
+}
+
+dl.glossary dt:first-of-type,
+dl.glossary dd:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+/* ========== Colophon chapter ========== */
+section.colophon { opacity: 0.95; }
+section.colophon > p:first-of-type::first-letter {
+  float: none;
+  font-size: inherit;
+  padding: 0;
+  color: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+}
+.colophon-end {
+  text-align: center;
+  font-size: 1.5rem;
+  color: var(--ink-faint);
+  letter-spacing: 1rem;
+  margin-top: 3rem;
+}
+
+/* ========== Responsive ========== */
+@media (max-width: 960px) {
+  .layout { grid-template-columns: 1fr; }
+  .sidebar {
+    position: static;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--rule);
+    padding: 1.5rem;
+  }
+  main { padding: 2rem 1.5rem 4rem; }
+  h1.title { font-size: 2.2rem; }
+  .compare { grid-template-columns: 1fr; }
+  dl.glossary { grid-template-columns: 1fr; row-gap: 0.2rem; }
+  dl.glossary dd { padding-bottom: 0.5rem; }
+  figure { padding: 1rem; overflow-x: auto; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <h1 class="sidebar-title">Order Management<br>A Primer</h1>
+    <nav id="toc">
+      <ol>
+        <li><a href="#why">Why This Document Exists</a></li>
+        <li><a href="#big-idea">The Big Idea in Three Sentences</a></li>
+        <li class="toc-group">Part&nbsp;One</li>
+        <li><a href="#the-problem">I. The Problem Without These Patterns</a></li>
+        <li class="toc-group">Part&nbsp;Two</li>
+        <li><a href="#ddd">II. Domain-Driven Design, Used Here</a></li>
+        <li><a href="#hexagonal">III. Hexagonal Architecture, Used Here</a></li>
+        <li class="toc-group">Part&nbsp;Three</li>
+        <li><a href="#anatomy">IV. Project Anatomy</a></li>
+        <li><a href="#aggregate">V. The Order Aggregate</a></li>
+        <li><a href="#ports">VI. The Ports</a></li>
+        <li><a href="#adapters">VII. The Adapters</a></li>
+        <li class="toc-group">Part&nbsp;Four</li>
+        <li><a href="#lifetime">VIII. Lifetime of a Request</a></li>
+        <li><a href="#virtual-threads">IX. Virtual Threads</a></li>
+        <li><a href="#archunit">X. Enforcing Architecture</a></li>
+        <li class="toc-group">Part&nbsp;Five</li>
+        <li><a href="#exercises">XI. Exercises</a></li>
+        <li><a href="#glossary">XII. Glossary</a></li>
+        <li><a href="#colophon">Colophon</a></li>
+      </ol>
+    </nav>
+  </aside>
+  <main>
+    <!-- MASTHEAD -->
+    <header class="masthead">
+      <p class="eyebrow">An Interactive Primer</p>
+      <h1 class="title">Order Management<br>Domain-Driven Design &amp; <em>Hexagonal Architecture</em> in Practice</h1>
+      <p class="deck">A walkthrough of the Micronaut 4 enterprise starter in this repository. Written for engineers who want to understand <em>why</em> every file is where it is, not just <em>that</em> it is.</p>
+      <div class="meta">
+        <span><strong>Reference stack</strong> Micronaut 4 &middot; Java 25 &middot; virtual threads</span>
+        <span><strong>Reference domain</strong> Order Management</span>
+      </div>
+    </header>
+<section id="why" class="chapter-body">
+  <h2 class="chapter"><span class="numeral">Preface</span> Why This Document Exists</h2>
+  <p class="lede">Enterprise code bases decay in predictable ways. A controller gains a quick database call. A domain object sprouts an ORM annotation. A test that used to run in two seconds now needs a database to boot. Six months later nobody can change anything with confidence.</p>
+  <p>This repository is a reference implementation for a service that resists that decay. It is small enough to read in an afternoon and strict enough that the compiler, the build, and a dedicated test module all refuse to let the usual drift happen.</p>
+  <p>The patterns applied here, Domain-Driven Design and Hexagonal Architecture, are old enough that most engineers have heard of them and new enough to the current Java 25 and Micronaut 4 stack that it is worth seeing them stitched together in a working, testable project.</p>
+  <p>Reading this document from top to bottom should leave you with three things:</p>
+  <ol class="steps">
+    <li>A clear mental model of what each layer is responsible for and, more importantly, what it is forbidden from doing.</li>
+    <li>The ability to open any file in the repository and explain why it is there and nowhere else.</li>
+    <li>Enough confidence to fork this template, replace the Order domain with your own, and have a working service inside a day.</li>
+  </ol>
+  <p>No prior exposure to DDD or hexagonal is assumed. Working familiarity with Java and HTTP services is.</p>
+</section>
+
+<section id="big-idea" class="chapter-body">
+  <h2 class="chapter"><span class="numeral">Primer</span> The Big Idea in Three Sentences</h2>
+  <p class="lede">If you take away nothing else from this document, take these:</p>
+  <ol class="steps">
+    <li><strong>The domain is the center of the universe and knows nothing about the outside world.</strong> It is pure Java. It has no idea that an HTTP server, a database, or a framework exist.</li>
+    <li><strong>The application layer coordinates use cases through narrow interfaces called ports.</strong> It defines what it needs ("give me a way to save an order") without caring who provides it.</li>
+    <li><strong>Everything that talks to the outside world is an adapter, and adapters only ever point inward.</strong> A controller depends on a port. A JDBC repository implements a port. Nothing in the middle depends on anything on the edge.</li>
+  </ol>
+  <p>Hexagonal Architecture is the picture. Domain-Driven Design is the vocabulary you use inside the picture. Together they produce code where you can swap PostgreSQL for DynamoDB without touching a single business rule, test a thousand variations of order cancellation in milliseconds, and reason about change by pointing at a module boundary instead of grepping for callers.</p>
+  <p>Everything else in this document is a careful explanation of those three sentences and how they manifest in the files sitting next to this one.</p>
+</section>
+
+<section id="the-problem" class="chapter-body">
+  <h2 class="chapter"><span class="numeral">Part&nbsp;One &middot; I</span> The Problem Without These Patterns</h2>
+  <p class="lede">Before we talk about solutions, it is worth being specific about the pain that justifies them. Below is the shape of a typical "layered" service that most engineers have inherited at least once.</p>
+
+  <h3>A typical layered service, honestly described</h3>
+  <p>Three layers: controller, service, repository. Each layer sees the next one through concrete classes. The domain class is a JPA entity with database annotations and getters and setters. The service class is a thin wrapper that calls one or two repository methods, maybe with a bit of logic sprinkled in. The controller validates input and returns JSON.</p>
+  <p>In isolation each file looks fine. The problems appear over time:</p>
+  <ul>
+    <li>Business rules end up scattered across the service layer, the entity (via lifecycle callbacks or validation annotations), and the controller (for "quick" checks). Nobody can tell you where the rules for cancelling an order actually live.</li>
+    <li>You cannot test the service without a running database or an elaborate ORM mock. Each test takes seconds.</li>
+    <li>Swapping persistence technology is a six-month project because every layer imports <code>jakarta.persistence</code> or your repository implementation directly.</li>
+    <li>Framework upgrades touch every file because the framework reaches into every layer.</li>
+    <li>New engineers learn the service by reading controllers, which show what the API does but hide what the business actually enforces.</li>
+  </ul>
+
+  <h3>Two ways to write the same code</h3>
+  <p>Consider cancelling an order. Here are two versions of the same change: one typical of the layered service above, one from this repository.</p>
+
+  <div class="compare">
+    <div class="side wrong">
+      <h5>Entangled</h5>
+<pre><code><span class="a">@RestController</span>
+<span class="a">@RequestMapping</span>(<span class="s">"/orders"</span>)
+<span class="k">class</span> OrderController {
+    <span class="k">private final</span> OrderJpaRepository repo;
+    <span class="k">private final</span> KafkaProducer kafka;
+
+    <span class="a">@PostMapping</span>(<span class="s">"/{id}/cancel"</span>)
+    <span class="k">public</span> OrderEntity cancel(<span class="a">@PathVariable</span> UUID id) {
+        OrderEntity o = repo.findById(id)
+            .orElseThrow(() -&gt; <span class="k">new</span> ResponseStatusException(NOT_FOUND));
+        <span class="k">if</span> (o.getStatus().equals(<span class="s">"SHIPPED"</span>)) {
+            <span class="k">throw new</span> ResponseStatusException(CONFLICT);
+        }
+        o.setStatus(<span class="s">"CANCELLED"</span>);
+        o.setCancelledAt(Instant.now());
+        repo.save(o);
+        kafka.send(<span class="s">"orders"</span>, <span class="k">new</span> CancelMsg(id));
+        <span class="k">return</span> o;
+    }
+}</code></pre>
+      <p>Business rule, persistence, event publishing, time, and HTTP are all one method. Testing it means spinning up Spring, a database, and a Kafka mock. Replacing Kafka means editing the controller.</p>
+    </div>
+    <div class="side right">
+      <h5>Separated</h5>
+<pre><code><span class="c">// adapter.inbound.rest</span>
+<span class="a">@Controller</span>(<span class="s">"/api/v1/orders"</span>)
+<span class="k">class</span> OrderController {
+    <span class="k">private final</span> CancelOrderUseCase cancelOrder;
+    <span class="c">// ... other use cases injected ...</span>
+
+    <span class="a">@Post</span>(<span class="s">"/{id}/cancel"</span>)
+    <span class="k">public</span> OrderResponse cancel(<span class="a">@PathVariable</span> String id,
+                                 <span class="a">@Valid @Body</span> CancelOrderRequest req) {
+        Order o = cancelOrder.cancel(
+            <span class="k">new</span> CancelOrderCommand(OrderId.of(id), req.reason()));
+        <span class="k">return</span> OrderResponse.from(o);
+    }
+}</code></pre>
+      <p>The controller translates HTTP to a command and back. It knows nothing about databases, time, or events. The cancellation rule lives in the aggregate; event publishing lives in the use case; both are tested without any framework at all.</p>
+    </div>
+  </div>
+
+  <div class="callout insight">
+    <span class="callout-label">Why this matters</span>
+    The entangled version is <em>easier to write first</em>. The separated version is easier to change for the next five years. Most of software engineering is choosing the second one, deliberately, even when a deadline wants the first.
+  </div>
+
+  <h3>What we gain</h3>
+  <ul>
+    <li><strong>Testability.</strong> The domain aggregate has nine unit tests that run in a quarter of a second with no framework at all.</li>
+    <li><strong>Readability.</strong> Business rules live in one place, named after what the business calls them.</li>
+    <li><strong>Replaceability.</strong> Swapping H2 for PostgreSQL is a profile change. Swapping JDBC for DynamoDB is a new adapter class and a wiring change.</li>
+    <li><strong>Resistance to drift.</strong> ArchUnit rules fail the build when someone imports a database type into the domain. The structure defends itself.</li>
+  </ul>
+
+  <h3>What we pay</h3>
+  <p>Honesty requires naming the costs:</p>
+  <ul>
+    <li><strong>More files.</strong> A controller, a request DTO, a response DTO, a command, a use case interface, a service implementation, an aggregate method, a port, a persistence record, a mapper, a Flyway migration. Eleven files to place and later cancel an order.</li>
+    <li><strong>More indirection.</strong> You cannot ctrl-click your way from REST to SQL in two hops.</li>
+    <li><strong>Discipline required.</strong> If the team does not internalize the rules, the architecture is theatre. The ArchUnit module fights that; the team culture completes it.</li>
+  </ul>
+  <p>The trade is worth it the moment the service outlives its original authors. Most do.</p>
+</section>
+
+<section id="ddd" class="chapter-body">
+  <h2 class="chapter"><span class="numeral">Part&nbsp;Two &middot; II</span> Domain-Driven Design, Used Here</h2>
+  <p class="lede">Domain-Driven Design is a long book by Eric Evans. The parts we actually use fit on two pages. This chapter covers them with concrete references to files in the repository.</p>
+
+  <h3>The one strategic idea: bounded context</h3>
+  <p>A bounded context is a chunk of a business where words mean a specific thing. In the Order Management context, "order" means something precise: a customer intent to purchase, with lines and a status. In a Fulfilment context the same word might mean a packing slip. In Billing it might mean an invoice draft.</p>
+  <p>The practical consequence: every bounded context gets its own module, its own package root, its own aggregate definition, and does not share domain types with any other context. If Billing needs an order id, it gets a copy of just the id, not the Order class.</p>
+  <blockquote>
+    "A model is a system of abstractions that describes selected aspects of a domain... There is no such thing as a universal model."
+    <cite>Eric Evans, Domain-Driven Design</cite>
+  </blockquote>
+  <p>This entire repository is one bounded context: <code>com.enterprise.starter.order</code>.</p>
+
+  <h3>The tactical pieces we use</h3>
+  <table>
+    <thead>
+      <tr><th>Pattern</th><th>What it is</th><th>Example in this repo</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Value Object</strong></td>
+        <td>Immutable, defined entirely by its attributes. Two instances with the same values are the same thing.</td>
+        <td><code>Money</code>, <code>OrderId</code>, <code>ProductId</code>, <code>OrderLine</code></td>
+      </tr>
+      <tr>
+        <td><strong>Entity</strong></td>
+        <td>Has an identity that persists across changes. Two entities with the same id are the same thing even if their fields differ.</td>
+        <td><code>Order</code> (an aggregate root is also an entity)</td>
+      </tr>
+      <tr>
+        <td><strong>Aggregate</strong></td>
+        <td>A cluster of entities and value objects treated as a single unit for consistency. One root entity controls all access.</td>
+        <td><code>Order</code> is the root; <code>OrderLine</code> is inside the aggregate.</td>
+      </tr>
+      <tr>
+        <td><strong>Domain Event</strong></td>
+        <td>A fact about something that happened. Immutable, past tense, named in the business vocabulary.</td>
+        <td><code>OrderPlaced</code>, <code>OrderCancelled</code></td>
+      </tr>
+      <tr>
+        <td><strong>Repository</strong></td>
+        <td>The illusion of an in-memory collection of aggregates. Used by application services; implemented by an adapter.</td>
+        <td><code>OrderRepository</code> port, <code>OrderPersistenceAdapter</code> implementation.</td>
+      </tr>
+      <tr>
+        <td><strong>Ubiquitous Language</strong></td>
+        <td>One name per concept, used by code and conversations alike.</td>
+        <td>"Place", "cancel", "line", "status" — all appear verbatim in the code.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Value objects, in code</h3>
+  <p>A value object has three properties: it is immutable, it validates itself on construction, and equality is by value. Java records are a near-perfect fit.</p>
+<pre><code><span class="k">public record</span> Money(BigDecimal amount, Currency currency) {
+
+    <span class="k">public</span> Money {
+        Objects.requireNonNull(amount, <span class="s">"amount must not be null"</span>);
+        Objects.requireNonNull(currency, <span class="s">"currency must not be null"</span>);
+        amount = amount.setScale(currency.getDefaultFractionDigits(), RoundingMode.HALF_UP);
+    }
+
+    <span class="k">public</span> Money add(Money other) {
+        requireSameCurrency(other);
+        <span class="k">return new</span> Money(<span class="k">this</span>.amount.add(other.amount), currency);
+    }
+    <span class="c">// ... multiply, isNegative, etc.</span>
+}</code></pre>
+  <p class="code-caption">order-domain/src/main/java/com/enterprise/starter/order/domain/model/Money.java</p>
+  <p>Notice what is <em>not</em> there: no setters, no mutable state, no framework annotations. Add two <code>Money</code> values in different currencies and you get an exception, not a nonsense result. That is a business rule, enforced by the type system.</p>
+
+  <h3>The aggregate as consistency boundary</h3>
+  <p>The single most important pattern DDD gives you is the aggregate. An aggregate is a group of objects that must stay internally consistent, with one root through which all changes flow. If a business invariant spans multiple objects, those objects must live inside the same aggregate.</p>
+  <p>The <code>Order</code> aggregate holds two invariants:</p>
+  <ol>
+    <li>An order must have at least one line.</li>
+    <li>Every line shares the aggregate's currency, and the total is kept in sync with the lines.</li>
+  </ol>
+  <p>The aggregate enforces these in its factory method:</p>
+<pre><code><span class="k">public static</span> Order place(OrderId id, List&lt;OrderLine&gt; lines, Instant placedAt) {
+    Objects.requireNonNull(id, <span class="s">"id must not be null"</span>);
+    Objects.requireNonNull(lines, <span class="s">"lines must not be null"</span>);
+    Objects.requireNonNull(placedAt, <span class="s">"placedAt must not be null"</span>);
+    <span class="k">if</span> (lines.isEmpty()) {
+        <span class="k">throw new</span> IllegalArgumentException(<span class="s">"An order must contain at least one line"</span>);
+    }
+    List&lt;OrderLine&gt; copy = List.copyOf(lines);
+    Money total = computeTotal(copy);
+    Order order = <span class="k">new</span> Order(id, <span class="k">new</span> ArrayList&lt;&gt;(copy), total, OrderStatus.PLACED, placedAt);
+    order.pendingEvents.add(<span class="k">new</span> OrderPlaced(id, total, placedAt));
+    <span class="k">return</span> order;
+}</code></pre>
+  <p class="code-caption">order-domain/src/main/java/com/enterprise/starter/order/domain/model/Order.java</p>
+  <p>There is no public constructor. The only way to create a placed order is through <code>place(...)</code>. The only way to cancel it is through <code>cancel(...)</code>. State transitions are explicit and enforced:</p>
+<pre><code><span class="k">public void</span> cancel(String reason, Instant cancelledAt) {
+    <span class="k">switch</span> (status) {
+        <span class="k">case</span> PLACED -&gt; {
+            <span class="k">this</span>.status = OrderStatus.CANCELLED;
+            pendingEvents.add(<span class="k">new</span> OrderCancelled(id, reason, cancelledAt));
+        }
+        <span class="k">case</span> DRAFT, CANCELLED, SHIPPED -&gt; <span class="k">throw new</span> InvalidOrderStateException(
+            status, <span class="s">"Order %s cannot be cancelled while in status %s"</span>.formatted(id.asString(), status));
+    }
+}</code></pre>
+  <p>If a shipped order cannot be cancelled, that rule lives here, in one place, and the compiler ensures no shortcut around it. Not in a service. Not in a validator annotation. Not in a database check. Here.</p>
+
+  <h3>Domain events</h3>
+  <p>When something significant happens, the aggregate records a <strong>domain event</strong>. Events are facts about the past: <code>OrderPlaced</code>, not <code>PlaceOrder</code>. They carry only the information a downstream reader needs.</p>
+<pre><code><span class="k">public sealed interface</span> DomainEvent <span class="k">permits</span> OrderPlaced, OrderCancelled {
+    Instant occurredAt();
+}
+
+<span class="k">public record</span> OrderPlaced(OrderId orderId, Money totalAmount, Instant occurredAt)
+        <span class="k">implements</span> DomainEvent { }
+
+<span class="k">public record</span> OrderCancelled(OrderId orderId, String reason, Instant occurredAt)
+        <span class="k">implements</span> DomainEvent { }</code></pre>
+  <p>The aggregate buffers events as they are produced. The use case drains them after a successful save and hands them to a <code>DomainEventPublisher</code>. This gives us two important things: events are only published if the state change actually persists, and the aggregate itself does not depend on any publication mechanism.</p>
+
+  <div class="callout">
+    <span class="callout-label">The sealed trick</span>
+    Declaring <code>DomainEvent</code> as <code>sealed</code> means every event type in this bounded context is known at compile time. If someone adds <code>OrderShipped</code> next week, every <code>switch</code> on <code>DomainEvent</code> will refuse to compile until it handles the new case. The language itself helps keep the event vocabulary current.
+  </div>
+
+  <h3>Ubiquitous language in practice</h3>
+  <p>Open <a href="#aggregate">Chapter V</a> and read the method names on <code>Order</code>: <code>place</code>, <code>cancel</code>, <code>drainEvents</code>. Open the use cases: <code>PlaceOrder</code>, <code>CancelOrder</code>, <code>GetOrder</code>. These are words the business uses. There is no <code>processOrderDataAsync</code>. There is no <code>handleOrderStateChangeEvent</code>. The vocabulary belongs to the domain expert, not the framework.</p>
+  <p>Picking the right words is unreasonably hard and worth the effort. Rename a method and the entire call graph tells you about it; rename a concept and the whole team re-aligns on what the system is.</p>
+</section>
+
+<section id="hexagonal" class="chapter-body">
+  <h2 class="chapter"><span class="numeral">Part&nbsp;Two &middot; III</span> Hexagonal Architecture, Used Here</h2>
+  <p class="lede">Hexagonal Architecture was named by Alistair Cockburn in 2005. The hexagon shape is incidental. The idea is: the application has an <em>inside</em>, with business rules, and an <em>outside</em>, with everything else. Code only ever flows inward across the boundary through named interfaces called ports.</p>
+  <p>This chapter shows the picture, names the layers, and gives the one rule that governs everything.</p>
+
+  <h3>The picture</h3>
+  <p>Hover any layer in the diagram below. The panel underneath explains what belongs there.</p>
+
+  <figure>
+    <svg class="hex-interactive" data-detail="hex-detail-1" viewBox="0 0 640 480" width="640" aria-label="Hexagonal architecture diagram">
+      <!-- Outer adapters ring -->
+      <g class="layer" data-title="Outbound Adapters" data-color="#1f4a52"
+         data-description="Implementations of outbound ports: a JDBC repository, a logging event publisher, a system-clock adapter. They talk to databases, message buses, external APIs, and system resources. They implement, they are not implemented against.">
+        <polygon class="layer-adapter" stroke-width="2"
+          points="320,10 585,160 585,320 320,470 55,320 55,160"/>
+      </g>
+
+      <!-- Application ring -->
+      <g class="layer" data-title="Application Layer" data-color="#3a5c3a"
+         data-description="Use cases that orchestrate a single business intention: place an order, cancel an order. They depend only on the domain and on their own ports. They declare what they need from the outside world through outbound port interfaces.">
+        <polygon class="layer-application" stroke-width="2"
+          points="320,70 485,170 485,310 320,410 155,310 155,170"/>
+      </g>
+
+      <!-- Domain core -->
+      <g class="layer" data-title="Domain Layer" data-color="#6b2d2b"
+         data-description="The aggregate, value objects, domain events, and domain exceptions. Pure Java. No framework. No annotations beyond the JDK. The business rules live here and nowhere else.">
+        <polygon class="layer-domain" stroke-width="2.5"
+          points="320,145 420,205 420,275 320,335 220,275 220,205"/>
+      </g>
+
+      <!-- Labels inside shapes -->
+      <text x="320" y="240" text-anchor="middle" font-family="Inter, sans-serif" font-size="13" font-weight="700" fill="#6b2d2b" pointer-events="none">DOMAIN</text>
+      <text x="320" y="258" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#6b2d2b" pointer-events="none">aggregate, value objects, events</text>
+
+      <text x="320" y="150" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="700" fill="#3a5c3a" pointer-events="none">APPLICATION</text>
+      <text x="320" y="365" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#3a5c3a" pointer-events="none">use cases + ports</text>
+
+      <text x="320" y="55" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="700" fill="#1f4a52" pointer-events="none">ADAPTERS</text>
+
+      <!-- Side labels on adapters -->
+      <text x="55" y="110" text-anchor="start" font-family="Inter, sans-serif" font-size="11" fill="#1f4a52" font-weight="600" pointer-events="none">REST controller</text>
+      <text x="585" y="110" text-anchor="end" font-family="Inter, sans-serif" font-size="11" fill="#1f4a52" font-weight="600" pointer-events="none">JDBC repository</text>
+      <text x="55" y="370" text-anchor="start" font-family="Inter, sans-serif" font-size="11" fill="#1f4a52" font-weight="600" pointer-events="none">Event publisher</text>
+      <text x="585" y="370" text-anchor="end" font-family="Inter, sans-serif" font-size="11" fill="#1f4a52" font-weight="600" pointer-events="none">System clock</text>
+
+      <!-- Dependency arrow (inward) -->
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" fill="#1a1a1a"/>
+        </marker>
+      </defs>
+      <path d="M 115 200 Q 180 210 215 220" fill="none" stroke="#1a1a1a" stroke-width="1.5" marker-end="url(#arr)"/>
+      <text x="100" y="195" font-family="Inter, sans-serif" font-size="9" fill="#1a1a1a" font-style="italic">dependencies point inward only</text>
+    </svg>
+    <div id="hex-detail-1" class="hex-detail">
+      <h5>Hover any layer to inspect it</h5>
+      <p>The diagram represents dependency direction, not deployment. Everything on the outside depends on things in the middle; the middle depends on nothing outside itself.</p>
+    </div>
+    <figcaption><span class="figure-label">Figure 1</span> Ports and adapters, as realized in this repository</figcaption>
+  </figure>
+
+  <h3>Ports: what the application needs</h3>
+  <p>A port is an interface owned by the application layer that describes a boundary. There are two kinds:</p>
+  <ul>
+    <li><strong>Inbound ports</strong> describe what the application can do. Something outside calls these. In this repository they are the <code>*UseCase</code> interfaces: <code>PlaceOrderUseCase</code>, <code>GetOrderUseCase</code>, <code>CancelOrderUseCase</code>.</li>
+    <li><strong>Outbound ports</strong> describe what the application needs from the outside world. The application calls these. Here they are <code>OrderRepository</code>, <code>DomainEventPublisher</code>, <code>ClockPort</code>.</li>
+  </ul>
+  <p>Both live in the application module. The application owns the definition, which is why the dependency arrow in the figure above only ever flies inward: adapters depend on application-owned types, never the reverse.</p>
+
+<pre><code><span class="c">// application.port.out: the application declares what it needs</span>
+<span class="k">public interface</span> OrderRepository {
+    Order save(Order order);
+    Optional&lt;Order&gt; findById(OrderId id);
+}
+
+<span class="c">// adapter.outbound.persistence: an outbound adapter promises to deliver it</span>
+<span class="a">@Singleton</span>
+<span class="k">public class</span> OrderPersistenceAdapter <span class="k">implements</span> OrderRepository {
+    <span class="c">// JDBC code lives here, hidden behind the interface</span>
+}</code></pre>
+
+  <h3>Adapters: how we meet the world</h3>
+  <p>Adapters are the translators. An inbound adapter translates HTTP, gRPC, Kafka, or a cron trigger into a call to a port. An outbound adapter translates a port call into SQL, HTTP, a message publish, or a system call. The adapter is thick with technology; the port it depends on is thin and clean.</p>
+
+  <h3>The one rule</h3>
+  <div class="callout warning">
+    <span class="callout-label">The dependency rule</span>
+    Source-code dependencies may only point inward. Inner layers know nothing about outer ones.
+  </div>
+  <p>From that one rule everything else follows:</p>
+  <ul>
+    <li>Domain depends on the JDK. Nothing else.</li>
+    <li>Application depends on domain. Nothing else.</li>
+    <li>Adapters depend on application (through its ports) and domain (for mapping).</li>
+    <li>Adapters do not depend on each other. A REST controller cannot touch a JDBC repository directly; it must go through a port.</li>
+    <li>The composition root (in the bootstrap module) is the only place that knows about every adapter at once, because its only job is to wire them together.</li>
+  </ul>
+  <p>Enforcing that rule by hand is a losing battle. Chapter X shows how a small ArchUnit module makes the compiler keep score.</p>
+
+  <h3>Why a hexagon and not a circle?</h3>
+  <p>The hexagon is Cockburn's visual way of saying: there is no privileged "top" or "bottom". A controller and a repository are both just adapters. The business logic in the middle treats them symmetrically. A persistence database is not any more special than an HTTP server.</p>
+  <p>Treat the shape as a mnemonic, not a constraint. The circle version of the same idea is sometimes called "Onion Architecture", and the Clean Architecture diagrams by Robert C. Martin are the same picture again. The vocabulary differs; the dependency rule is identical.</p>
+</section>
+
+<section id="anatomy" class="chapter-body">
+  <h2 class="chapter"><span class="numeral">Part&nbsp;Three &middot; IV</span> Project Anatomy</h2>
+  <p class="lede">The project is a Maven multi-module build with six Java modules. Each module corresponds to exactly one circle of the hexagon diagram. The <code>pom.xml</code> dependencies physically enforce the dependency rule: a module whose POM cannot see another module cannot import from it.</p>
+
+  <h3>The modules</h3>
+  <table>
+    <thead>
+      <tr><th>Module</th><th>Layer</th><th>What it contains</th><th>Depends on</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>order-domain</code></td>
+        <td><span class="pill domain">Domain</span></td>
+        <td>Aggregate, value objects, events, domain exceptions</td>
+        <td>Nothing (JDK only)</td>
+      </tr>
+      <tr>
+        <td><code>order-application</code></td>
+        <td><span class="pill application">Application</span></td>
+        <td>Use case interfaces, use case services, inbound/outbound ports, commands</td>
+        <td><code>order-domain</code></td>
+      </tr>
+      <tr>
+        <td><code>order-adapter-rest</code></td>
+        <td><span class="pill adapter">Inbound</span></td>
+        <td>HTTP controller, request/response DTOs, exception handlers</td>
+        <td><code>order-application</code>, <code>order-domain</code>, Micronaut HTTP</td>
+      </tr>
+      <tr>
+        <td><code>order-adapter-persistence</code></td>
+        <td><span class="pill adapter">Outbound</span></td>
+        <td>JDBC repositories, record entities, mapper, Flyway migrations</td>
+        <td><code>order-application</code>, <code>order-domain</code>, Micronaut Data JDBC</td>
+      </tr>
+      <tr>
+        <td><code>order-bootstrap</code></td>
+        <td><span class="pill bootstrap">Bootstrap</span></td>
+        <td>Main class, config, use case factory, default clock/event adapters, application.yml</td>
+        <td>All adapters and application</td>
+      </tr>
+      <tr>
+        <td><code>architecture-tests</code></td>
+        <td><span class="pill tests">Tests</span></td>
+        <td>ArchUnit rules that fail the build on drift</td>
+        <td>Everything (for inspection)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>The dependency graph</h3>
+  <p>The following diagram shows which module can see which. Arrows point from caller to callee. There is one strict acyclic flow.</p>
+
+  <figure>
+    <svg viewBox="0 0 760 420" width="760" aria-label="Module dependency graph">
+      <defs>
+        <marker id="arr2" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" fill="#1a1a1a"/>
+        </marker>
+      </defs>
+
+      <!-- Domain -->
+      <g>
+        <rect x="310" y="180" width="140" height="60" rx="4" fill="#f1e2e1" stroke="#6b2d2b" stroke-width="2"/>
+        <text x="380" y="208" text-anchor="middle" font-family="Inter, sans-serif" font-size="13" font-weight="700" fill="#6b2d2b">order-domain</text>
+        <text x="380" y="226" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#6b2d2b">pure Java, no deps</text>
+      </g>
+
+      <!-- Application -->
+      <g>
+        <rect x="310" y="60" width="140" height="60" rx="4" fill="#e2eee2" stroke="#3a5c3a" stroke-width="2"/>
+        <text x="380" y="88" text-anchor="middle" font-family="Inter, sans-serif" font-size="13" font-weight="700" fill="#3a5c3a">order-application</text>
+        <text x="380" y="106" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#3a5c3a">use cases + ports</text>
+      </g>
+
+      <!-- REST adapter -->
+      <g>
+        <rect x="60" y="60" width="160" height="60" rx="4" fill="#dfeaec" stroke="#1f4a52" stroke-width="2"/>
+        <text x="140" y="88" text-anchor="middle" font-family="Inter, sans-serif" font-size="13" font-weight="700" fill="#1f4a52">order-adapter-rest</text>
+        <text x="140" y="106" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#1f4a52">HTTP in</text>
+      </g>
+
+      <!-- Persistence adapter -->
+      <g>
+        <rect x="540" y="60" width="180" height="60" rx="4" fill="#dfeaec" stroke="#1f4a52" stroke-width="2"/>
+        <text x="630" y="88" text-anchor="middle" font-family="Inter, sans-serif" font-size="13" font-weight="700" fill="#1f4a52">order-adapter-persistence</text>
+        <text x="630" y="106" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#1f4a52">JDBC out</text>
+      </g>
+
+      <!-- Bootstrap -->
+      <g>
+        <rect x="280" y="310" width="200" height="60" rx="4" fill="#f4ead3" stroke="#a8761a" stroke-width="2"/>
+        <text x="380" y="338" text-anchor="middle" font-family="Inter, sans-serif" font-size="13" font-weight="700" fill="#a8761a">order-bootstrap</text>
+        <text x="380" y="356" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#a8761a">composition root</text>
+      </g>
+
+      <!-- Arrows: rest -> application, rest -> domain -->
+      <path d="M 220 95 L 310 95" stroke="#1a1a1a" stroke-width="1.5" marker-end="url(#arr2)"/>
+      <path d="M 140 120 Q 210 190 310 210" fill="none" stroke="#1a1a1a" stroke-width="1.5" marker-end="url(#arr2)"/>
+
+      <!-- Arrows: persistence -> application, persistence -> domain -->
+      <path d="M 540 95 L 450 95" stroke="#1a1a1a" stroke-width="1.5" marker-end="url(#arr2)"/>
+      <path d="M 630 120 Q 540 190 450 210" fill="none" stroke="#1a1a1a" stroke-width="1.5" marker-end="url(#arr2)"/>
+
+      <!-- Arrow: application -> domain -->
+      <path d="M 380 120 L 380 180" stroke="#1a1a1a" stroke-width="1.5" marker-end="url(#arr2)"/>
+
+      <!-- Arrows: bootstrap -> everything -->
+      <path d="M 320 310 Q 260 260 215 125" fill="none" stroke="#a8761a" stroke-width="1.3" stroke-dasharray="4 3" marker-end="url(#arr2)"/>
+      <path d="M 380 310 L 380 245" stroke="#a8761a" stroke-width="1.3" stroke-dasharray="4 3" marker-end="url(#arr2)"/>
+      <path d="M 440 310 Q 500 260 560 125" fill="none" stroke="#a8761a" stroke-width="1.3" stroke-dasharray="4 3" marker-end="url(#arr2)"/>
+      <path d="M 420 310 Q 440 220 435 125" fill="none" stroke="#a8761a" stroke-width="1.3" stroke-dasharray="4 3" marker-end="url(#arr2)"/>
+
+      <!-- Legend -->
+      <g transform="translate(40, 390)">
+        <line x1="0" y1="0" x2="30" y2="0" stroke="#1a1a1a" stroke-width="1.5"/>
+        <text x="38" y="4" font-family="Inter, sans-serif" font-size="10" fill="#1a1a1a">source dependency</text>
+        <line x1="200" y1="0" x2="230" y2="0" stroke="#a8761a" stroke-width="1.3" stroke-dasharray="4 3"/>
+        <text x="238" y="4" font-family="Inter, sans-serif" font-size="10" fill="#1a1a1a">bootstrap wires at runtime</text>
+      </g>
+    </svg>
+    <figcaption><span class="figure-label">Figure 2</span> Maven module dependencies. Arrows point from caller to callee.</figcaption>
+  </figure>
+
+  <h3>Why the shape matters</h3>
+  <p>Three things to notice:</p>
+  <ol class="steps">
+    <li><strong>The REST and persistence adapters never share an edge.</strong> There is no arrow between them. A controller cannot import a persistence record because its POM does not declare the dependency and the module system refuses the import.</li>
+    <li><strong>The application module has one incoming dependency (bootstrap) and no outgoing framework dependencies.</strong> It stays pure, which is why its use cases are plain classes with no annotations.</li>
+    <li><strong>The bootstrap module is the only one with knowledge of everything.</strong> This is intentional: wiring is a separate concern from business logic. If you wanted to run the same application layer behind a gRPC adapter instead of REST, you would swap one dependency in bootstrap and change nothing else.</li>
+  </ol>
+
+  <h3>Package layout inside each module</h3>
+  <p>Within a module, packages are organized by responsibility, not by technical layer. The domain module has <code>model</code>, <code>event</code>, <code>exception</code>. The application module has <code>command</code>, <code>port.in</code>, <code>port.out</code>, <code>service</code>. The persistence adapter has <code>entity</code>, <code>repository</code>, <code>mapper</code>, <code>adapter</code>.</p>
+<pre><code>order-domain/
+  src/main/java/com/enterprise/starter/order/domain/
+    model/        Order, OrderLine, OrderId, Money, OrderStatus, ProductId
+    event/        DomainEvent, OrderPlaced, OrderCancelled
+    exception/    DomainException, OrderNotFoundException, InvalidOrderStateException
+
+order-application/
+  src/main/java/com/enterprise/starter/order/application/
+    command/      PlaceOrderCommand, CancelOrderCommand, OrderLineCommand
+    port/in/      PlaceOrderUseCase, GetOrderUseCase, CancelOrderUseCase
+    port/out/     OrderRepository, DomainEventPublisher, ClockPort
+    service/      PlaceOrderService, GetOrderService, CancelOrderService</code></pre>
+  <p>Package names stay close to the ubiquitous language. There is no <code>util</code>, <code>helper</code>, or <code>common</code>: those names are warning signs that the design does not have a word yet for whatever they contain.</p>
+</section>
+
+<section id="aggregate" class="chapter-body">
+  <h2 class="chapter"><span class="numeral">Part&nbsp;Three &middot; V</span> The Order Aggregate, Dissected</h2>
+  <p class="lede">The <code>Order</code> aggregate is the heart of the system. This chapter walks through its design, its state machine, and the small set of rules it enforces. Every pattern discussed in the DDD chapter is embodied in this one file.</p>
+
+  <h3>The state machine</h3>
+  <p>An order moves through a small set of named states. Illegal transitions throw <code>InvalidOrderStateException</code>. The state machine is the first thing to internalize.</p>
+
+  <figure>
+    <svg viewBox="0 0 760 300" width="760" aria-label="Order state machine">
+      <defs>
+        <marker id="arr3" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" fill="#1a1a1a"/>
+        </marker>
+      </defs>
+
+      <!-- Start dot -->
+      <circle cx="60" cy="150" r="8" fill="#1a1a1a"/>
+
+      <!-- DRAFT (not used yet, reserved) -->
+      <g>
+        <rect x="140" y="118" width="130" height="64" rx="4" fill="#eee9e0" stroke="#9b8d6f" stroke-width="1.5" stroke-dasharray="3 3"/>
+        <text x="205" y="146" text-anchor="middle" font-family="Inter, sans-serif" font-size="14" font-weight="700" fill="#5e5641">DRAFT</text>
+        <text x="205" y="164" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#5e5641">reserved for future use</text>
+      </g>
+
+      <!-- PLACED -->
+      <g>
+        <rect x="330" y="118" width="130" height="64" rx="4" fill="#f1e2e1" stroke="#6b2d2b" stroke-width="2"/>
+        <text x="395" y="146" text-anchor="middle" font-family="Inter, sans-serif" font-size="14" font-weight="700" fill="#6b2d2b">PLACED</text>
+        <text x="395" y="164" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#6b2d2b">entry state in this template</text>
+      </g>
+
+      <!-- CANCELLED -->
+      <g>
+        <rect x="540" y="40" width="180" height="60" rx="4" fill="#f4ead3" stroke="#a8761a" stroke-width="2"/>
+        <text x="630" y="68" text-anchor="middle" font-family="Inter, sans-serif" font-size="14" font-weight="700" fill="#a8761a">CANCELLED</text>
+        <text x="630" y="86" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#a8761a">terminal</text>
+      </g>
+
+      <!-- SHIPPED -->
+      <g>
+        <rect x="540" y="210" width="180" height="60" rx="4" fill="#e2eee2" stroke="#3a5c3a" stroke-width="2"/>
+        <text x="630" y="238" text-anchor="middle" font-family="Inter, sans-serif" font-size="14" font-weight="700" fill="#3a5c3a">SHIPPED</text>
+        <text x="630" y="256" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#3a5c3a">terminal, out of scope here</text>
+      </g>
+
+      <!-- Transitions -->
+      <path d="M 68 150 L 328 150" stroke="#1a1a1a" stroke-width="1.5" marker-end="url(#arr3)"/>
+      <text x="200" y="140" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#1a1a1a" font-style="italic">Order.place(id, lines, now)</text>
+
+      <path d="M 460 140 Q 520 110 540 85" fill="none" stroke="#1a1a1a" stroke-width="1.5" marker-end="url(#arr3)"/>
+      <text x="490" y="110" font-family="Inter, sans-serif" font-size="11" fill="#1a1a1a" font-style="italic">cancel(reason, now)</text>
+
+      <path d="M 460 165 Q 520 200 540 230" fill="none" stroke="#9b8d6f" stroke-width="1.3" stroke-dasharray="4 3" marker-end="url(#arr3)"/>
+      <text x="500" y="210" font-family="Inter, sans-serif" font-size="11" fill="#5e5641" font-style="italic">(future: ship)</text>
+    </svg>
+    <figcaption><span class="figure-label">Figure 3</span> Order state machine. Solid transitions are implemented today; dashed ones are reserved.</figcaption>
+  </figure>
+
+  <h3>The rules, listed</h3>
+  <ol class="steps">
+    <li>An order must have at least one line to be placed. Zero-line orders are rejected at construction.</li>
+    <li>All lines must share the aggregate's currency. Mixed-currency orders are rejected.</li>
+    <li>A placed order can be cancelled. A cancelled or shipped order cannot be cancelled again.</li>
+    <li>Every state transition records a domain event in the aggregate's internal buffer.</li>
+    <li>Only one entry exists to drain events: <code>drainEvents()</code>, which clears the buffer. The use case drains after a successful save.</li>
+  </ol>
+
+  <h3>Reading the code side by side</h3>
+  <p>The two tabs below show the two things the aggregate does: creation (the factory) and transition (the cancellation).</p>
+
+  <div class="tabs">
+    <div class="tab-list">
+      <button class="tab active">Creation</button>
+      <button class="tab">Cancellation</button>
+      <button class="tab">Events</button>
+    </div>
+    <div class="tab-panels">
+    <div class="tab-panel active">
+<pre><code><span class="k">public static</span> Order place(OrderId id, List&lt;OrderLine&gt; lines, Instant placedAt) {
+    Objects.requireNonNull(id, <span class="s">"id must not be null"</span>);
+    Objects.requireNonNull(lines, <span class="s">"lines must not be null"</span>);
+    Objects.requireNonNull(placedAt, <span class="s">"placedAt must not be null"</span>);
+    <span class="k">if</span> (lines.isEmpty()) {
+        <span class="k">throw new</span> IllegalArgumentException(<span class="s">"An order must contain at least one line"</span>);
+    }
+    List&lt;OrderLine&gt; copy = List.copyOf(lines);
+    Money total = computeTotal(copy);
+    Order order = <span class="k">new</span> Order(id, <span class="k">new</span> ArrayList&lt;&gt;(copy), total,
+                              OrderStatus.PLACED, placedAt);
+    order.pendingEvents.add(<span class="k">new</span> OrderPlaced(id, total, placedAt));
+    <span class="k">return</span> order;
+}
+
+<span class="k">private static</span> Money computeTotal(List&lt;OrderLine&gt; lines) {
+    Currency currency = lines.get(0).unitPrice().currency();
+    Money total = Money.zero(currency);
+    <span class="k">for</span> (OrderLine line : lines) {
+        <span class="k">if</span> (!line.unitPrice().currency().equals(currency)) {
+            <span class="k">throw new</span> IllegalArgumentException(<span class="s">"All order lines must share the same currency"</span>);
+        }
+        total = total.add(line.subtotal());
+    }
+    <span class="k">return</span> total;
+}</code></pre>
+      <p>The constructor is private. The only way in is <code>place(...)</code>. Validation and total calculation happen before the object is observable. Once constructed, the aggregate's invariants hold.</p>
+    </div>
+    <div class="tab-panel">
+<pre><code><span class="k">public void</span> cancel(String reason, Instant cancelledAt) {
+    Objects.requireNonNull(reason, <span class="s">"reason must not be null"</span>);
+    Objects.requireNonNull(cancelledAt, <span class="s">"cancelledAt must not be null"</span>);
+    <span class="k">switch</span> (status) {
+        <span class="k">case</span> PLACED -&gt; {
+            <span class="k">this</span>.status = OrderStatus.CANCELLED;
+            pendingEvents.add(<span class="k">new</span> OrderCancelled(id, reason, cancelledAt));
+        }
+        <span class="k">case</span> DRAFT, CANCELLED, SHIPPED -&gt; <span class="k">throw new</span> InvalidOrderStateException(
+            status,
+            <span class="s">"Order %s cannot be cancelled while in status %s"</span>.formatted(id.asString(), status));
+    }
+}</code></pre>
+      <p>A single switch expression over the enum covers every legal and illegal case. If a future developer adds <code>SHIPPED</code> support, the compiler will force an update here because the switch is exhaustive on a sealed-like enum.</p>
+    </div>
+    <div class="tab-panel">
+<pre><code><span class="k">private final</span> List&lt;DomainEvent&gt; pendingEvents = <span class="k">new</span> ArrayList&lt;&gt;();
+
+<span class="k">public</span> List&lt;DomainEvent&gt; drainEvents() {
+    List&lt;DomainEvent&gt; drained = List.copyOf(pendingEvents);
+    pendingEvents.clear();
+    <span class="k">return</span> drained;
+}</code></pre>
+      <p>Events are buffered inside the aggregate. <code>drainEvents</code> is called by the use case <em>after</em> the save completes. If the save fails, the events are never published, which keeps domain state and event stream aligned.</p>
+    </div>
+    </div>
+  </div>
+
+  <h3>Why the aggregate owns its own state transitions</h3>
+  <p>A common mistake is to put transition logic in the service layer: <code>if (order.getStatus().equals(PLACED)) order.setStatus(CANCELLED);</code>. That gives you an object that is nothing more than a struct and a service that owns the rules. Six months later a different service forgets the check.</p>
+  <p>Putting the transition on the aggregate makes it impossible to write that broken code: there is no <code>setStatus</code>. You call <code>cancel</code> and the aggregate decides. One method, one rule, one place.</p>
+
+  <h3>Verification</h3>
+  <p>Nine unit tests on <code>Order</code> cover: empty-line rejection, mixed-currency rejection, successful placement, event emission on placement, cancellation of a placed order, event emission on cancellation, double-cancellation rejection, shipped-order rejection, immutability of the drained events list. All run in under a quarter of a second, no framework involved.</p>
+<pre><code><span class="a">@Test</span>
+<span class="k">void</span> cannotCancelAlreadyCancelledOrder() {
+    Order order = Order.place(OrderId.generate(), List.of(sampleLine()), NOW);
+    order.cancel(<span class="s">"customer request"</span>, NOW);
+
+    assertThatThrownBy(() -&gt; order.cancel(<span class="s">"again"</span>, NOW))
+        .isInstanceOf(InvalidOrderStateException.<span class="k">class</span>);
+}</code></pre>
+  <p>That is the entire test. No mocks, no containers, no fixtures beyond a <code>sampleLine()</code> helper. The payoff of a pure domain is tests that read like the specification.</p>
+</section>
+
+<section id="ports" class="chapter-body">
+  <h2 class="chapter"><span class="numeral">Part&nbsp;Three &middot; VI</span> The Ports</h2>
+  <p class="lede">A port is an interface that lives inside the application layer and names a boundary. Inbound ports describe what the application can be asked to do. Outbound ports describe what the application needs the world to provide. This chapter lists both, explains the choices behind them, and shows what the use case implementations look like.</p>
+
+  <h3>Inbound ports: the shape of the application</h3>
+  <p>There is one inbound port per business intention. Not per endpoint. Not per database table. Per intention.</p>
+
+<pre><code><span class="k">public interface</span> PlaceOrderUseCase {
+    Order place(PlaceOrderCommand command);
+}
+
+<span class="k">public interface</span> GetOrderUseCase {
+    Order get(OrderId id);
+}
+
+<span class="k">public interface</span> CancelOrderUseCase {
+    Order cancel(CancelOrderCommand command);
+}</code></pre>
+  <p>Three interfaces, one method each. If the system grows a new intention, we add a port; we do not add a method to an existing one. That constraint keeps classes small and dependencies honest: a controller that only needs to place orders takes one port, not a bag of methods it ignores.</p>
+
+  <div class="callout">
+    <span class="callout-label">Interface segregation</span>
+    This is the <code>I</code> in SOLID applied to the application boundary. A caller declares the slim interface it depends on; the implementation can satisfy many. The REST controller depends on three use case interfaces because it exposes three endpoints.
+  </div>
+
+  <h3>Commands: input as data</h3>
+  <p>Each inbound port takes a <strong>command</strong>: an immutable value object that carries exactly the data needed for that intention. Commands live in the application module, not in the REST adapter, because they are part of the application's shape.</p>
+
+<pre><code><span class="k">public record</span> PlaceOrderCommand(List&lt;OrderLineCommand&gt; lines) {
+    <span class="k">public</span> PlaceOrderCommand {
+        Objects.requireNonNull(lines, <span class="s">"lines must not be null"</span>);
+        lines = List.copyOf(lines);
+    }
+}
+
+<span class="k">public record</span> OrderLineCommand(String productId, <span class="k">int</span> quantity,
+                               BigDecimal unitPriceAmount, String currencyCode) { }
+
+<span class="k">public record</span> CancelOrderCommand(OrderId orderId, String reason) {
+    <span class="k">public</span> CancelOrderCommand {
+        Objects.requireNonNull(orderId, <span class="s">"orderId must not be null"</span>);
+        Objects.requireNonNull(reason, <span class="s">"reason must not be null"</span>);
+    }
+}</code></pre>
+  <p>Commands are deliberately simple: strings, numbers, and lists. The use case translates them into domain value objects (<code>OrderLine</code>, <code>Money</code>, <code>ProductId</code>) during execution. This keeps the domain free of parsing concerns and the inbound boundary easy to extend with validation and format negotiation.</p>
+
+  <h3>Outbound ports: the shape of the world</h3>
+  <p>There are three outbound ports in this template. Each describes a single capability the application needs.</p>
+
+<pre><code><span class="k">public interface</span> OrderRepository {
+    Order save(Order order);
+    Optional&lt;Order&gt; findById(OrderId id);
+}
+
+<span class="k">public interface</span> DomainEventPublisher {
+    <span class="k">void</span> publish(List&lt;DomainEvent&gt; events);
+}
+
+<span class="k">public interface</span> ClockPort {
+    Instant now();
+}</code></pre>
+
+  <p>Three decisions worth noting:</p>
+  <ul>
+    <li><strong>Repository returns the aggregate type, not a persistence record.</strong> The adapter is responsible for mapping to and from storage. The port speaks the domain's language.</li>
+    <li><strong>Event publishing takes a list.</strong> This matches how aggregates emit events (one aggregate operation produces one batch) and lets outbound adapters publish atomically where possible.</li>
+    <li><strong>Time is a port.</strong> This is the smallest-looking decision with the largest testability payoff. In production the implementation is <code>Clock.systemUTC()</code>; in tests it is a <code>FixedClock</code> that returns the same instant on every call.</li>
+  </ul>
+
+  <h3>Use case services: orchestration without logic</h3>
+  <p>A use case service is where the pieces come together. It accepts a command, calls outbound ports, exercises the aggregate, saves, publishes events, returns the result. It should contain no business rules of its own: those belong on the aggregate.</p>
+
+<pre><code><span class="k">public class</span> PlaceOrderService <span class="k">implements</span> PlaceOrderUseCase {
+
+    <span class="k">private final</span> OrderRepository orderRepository;
+    <span class="k">private final</span> DomainEventPublisher eventPublisher;
+    <span class="k">private final</span> ClockPort clock;
+
+    <span class="k">public</span> PlaceOrderService(OrderRepository orderRepository,
+                             DomainEventPublisher eventPublisher,
+                             ClockPort clock) {
+        <span class="k">this</span>.orderRepository = Objects.requireNonNull(orderRepository);
+        <span class="k">this</span>.eventPublisher = Objects.requireNonNull(eventPublisher);
+        <span class="k">this</span>.clock = Objects.requireNonNull(clock);
+    }
+
+    <span class="a">@Override</span>
+    <span class="k">public</span> Order place(PlaceOrderCommand command) {
+        Objects.requireNonNull(command, <span class="s">"command must not be null"</span>);
+        List&lt;OrderLine&gt; lines = command.lines().stream()
+            .map(<span class="k">this</span>::toOrderLine)
+            .toList();
+        Order order = Order.place(OrderId.generate(), lines, clock.now());
+        Order saved = orderRepository.save(order);
+        eventPublisher.publish(saved.drainEvents());
+        <span class="k">return</span> saved;
+    }
+
+    <span class="k">private</span> OrderLine toOrderLine(OrderLineCommand command) {
+        Money unitPrice = <span class="k">new</span> Money(command.unitPriceAmount(),
+                                     Currency.getInstance(command.currencyCode()));
+        <span class="k">return new</span> OrderLine(ProductId.of(command.productId()), command.quantity(), unitPrice);
+    }
+}</code></pre>
+  <p class="code-caption">order-application/src/main/java/com/enterprise/starter/order/application/service/PlaceOrderService.java</p>
+
+  <div class="callout insight">
+    <span class="callout-label">A quiet detail</span>
+    There is no <code>@Singleton</code> on <code>PlaceOrderService</code>. The application module declares zero dependency on any dependency-injection framework. Wiring happens in the <code>UseCaseConfiguration</code> factory in the bootstrap module. The service is a plain class that can be instantiated by hand, by Micronaut, by Spring, or by a test, with no changes to its code.
+  </div>
+
+  <h3>The symmetry</h3>
+  <p>Inbound and outbound ports are drawn with the same arrow in diagrams because they are the same kind of thing: an interface the application owns. The only difference is which side holds the implementation. Inbound: adapter calls into the interface. Outbound: adapter implements it. Both: the application decides the shape.</p>
+</section>
+
+<section id="adapters" class="chapter-body">
+  <h2 class="chapter"><span class="numeral">Part&nbsp;Three &middot; VII</span> The Adapters</h2>
+  <p class="lede">Adapters are where the application meets reality. This chapter opens each adapter, shows what it translates, and highlights the small discipline each one maintains.</p>
+
+  <h3>The REST adapter: translating HTTP to commands</h3>
+  <p>The REST controller does three things and nothing else: it reads the request, maps it to a command, and shapes the result into a response. Business logic is forbidden here.</p>
+
+<pre><code><span class="a">@Controller</span>(<span class="s">"/api/v1/orders"</span>)
+<span class="k">public class</span> OrderController {
+
+    <span class="k">private final</span> PlaceOrderUseCase placeOrder;
+    <span class="k">private final</span> GetOrderUseCase getOrder;
+    <span class="k">private final</span> CancelOrderUseCase cancelOrder;
+
+    <span class="k">public</span> OrderController(PlaceOrderUseCase placeOrder,
+                           GetOrderUseCase getOrder,
+                           CancelOrderUseCase cancelOrder) {
+        <span class="k">this</span>.placeOrder = placeOrder;
+        <span class="k">this</span>.getOrder = getOrder;
+        <span class="k">this</span>.cancelOrder = cancelOrder;
+    }
+
+    <span class="a">@Post</span>
+    <span class="k">public</span> HttpResponse&lt;OrderResponse&gt; place(<span class="a">@Valid @Body</span> PlaceOrderRequest request) {
+        List&lt;OrderLineCommand&gt; lines = request.lines().stream()
+            .map(OrderLineRequest::toCommand)
+            .toList();
+        Order placed = placeOrder.place(<span class="k">new</span> PlaceOrderCommand(lines));
+        <span class="k">return</span> HttpResponse.created(OrderResponse.from(placed));
+    }
+
+    <span class="a">@Get</span>(<span class="s">"/{id}"</span>)
+    <span class="k">public</span> OrderResponse get(<span class="a">@PathVariable</span> String id) {
+        <span class="k">return</span> OrderResponse.from(getOrder.get(OrderId.of(id)));
+    }
+
+    <span class="a">@Post</span>(<span class="s">"/{id}/cancel"</span>)
+    <span class="k">public</span> OrderResponse cancel(<span class="a">@PathVariable</span> String id,
+                                 <span class="a">@Valid @Body</span> CancelOrderRequest request) {
+        <span class="k">return</span> OrderResponse.from(
+            cancelOrder.cancel(<span class="k">new</span> CancelOrderCommand(OrderId.of(id), request.reason())));
+    }
+}</code></pre>
+
+  <h4>Error mapping</h4>
+  <p>The adapter is also responsible for turning domain exceptions into HTTP responses. Two exception handlers do this, both returning RFC 7807 <code>application/problem+json</code>:</p>
+  <table>
+    <thead>
+      <tr><th>Domain exception</th><th>HTTP status</th><th>Body type</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>OrderNotFoundException</code></td><td>404 Not Found</td><td><code>application/problem+json</code></td></tr>
+      <tr><td><code>InvalidOrderStateException</code></td><td>409 Conflict</td><td><code>application/problem+json</code></td></tr>
+      <tr><td><code>ConstraintViolationException</code> (validation)</td><td>400 Bad Request</td><td>Micronaut default</td></tr>
+    </tbody>
+  </table>
+
+  <h3>The persistence adapter: translating aggregates to rows</h3>
+  <p>The persistence adapter owns the <code>OrderRecord</code> and <code>OrderLineRecord</code> types, the two <code>JdbcRepository</code> interfaces, and a mapper. The <code>OrderPersistenceAdapter</code> implements the <code>OrderRepository</code> port and does the translation.</p>
+
+<pre><code><span class="a">@Singleton</span>
+<span class="k">public class</span> OrderPersistenceAdapter <span class="k">implements</span> OrderRepository {
+
+    <span class="k">private final</span> OrderJdbcRepository orders;
+    <span class="k">private final</span> OrderLineJdbcRepository lines;
+    <span class="k">private final</span> OrderEntityMapper mapper;
+
+    <span class="a">@Override</span>
+    <span class="a">@Transactional</span>
+    <span class="k">public</span> Order save(Order order) {
+        OrderRecord record = mapper.toRecord(order);
+        OrderRecord saved = orders.existsById(record.id())
+            ? orders.update(record)
+            : orders.save(record);
+        lines.deleteByOrderId(saved.id());
+        <span class="k">for</span> (OrderLineRecord line : mapper.toLineRecords(order)) {
+            lines.save(line);
+        }
+        <span class="k">return</span> order;
+    }
+
+    <span class="a">@Override</span>
+    <span class="k">public</span> Optional&lt;Order&gt; findById(OrderId id) {
+        <span class="k">return</span> orders.findById(id.asString())
+            .map(record -&gt; mapper.toDomain(record, lines.findByOrderId(record.id())));
+    }
+}</code></pre>
+  <p>The mapper is a plain class that walks the record tree and builds domain objects, using a package-visible reconstruction constructor on <code>Order</code> for rehydration. The adapter never leaks a <code>OrderRecord</code> back into the application layer; the port signature forbids it.</p>
+
+  <h4>Flyway migration</h4>
+  <p>Schema evolution lives alongside the adapter it serves. One migration today, numbered <code>V1</code>:</p>
+<pre><code><span class="k">CREATE TABLE</span> orders (
+    id             VARCHAR(36)  PRIMARY KEY,
+    status         VARCHAR(16)  NOT NULL,
+    total_amount   DECIMAL(19,4) NOT NULL,
+    total_currency CHAR(3)      NOT NULL,
+    placed_at      TIMESTAMP    NOT NULL
+);
+
+<span class="k">CREATE TABLE</span> order_lines (
+    id              BIGINT       GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    order_id        VARCHAR(36)  NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    product_id      VARCHAR(64)  NOT NULL,
+    quantity        INTEGER      NOT NULL,
+    unit_price      DECIMAL(19,4) NOT NULL,
+    currency        CHAR(3)      NOT NULL
+);</code></pre>
+
+  <h3>Clock and event publisher: the smallest adapters</h3>
+  <p>The two adapters that live inside the bootstrap module are the default implementations for <code>ClockPort</code> and <code>DomainEventPublisher</code>. They are small on purpose: in a real deployment you would replace <code>LoggingDomainEventPublisher</code> with a Kafka or outbox-based implementation, and leave the application code untouched.</p>
+
+<pre><code><span class="a">@Singleton</span>
+<span class="k">class</span> SystemClockAdapter <span class="k">implements</span> ClockPort {
+    <span class="a">@Override</span>
+    <span class="k">public</span> Instant now() {
+        <span class="k">return</span> Instant.now();
+    }
+}
+
+<span class="a">@Singleton</span>
+<span class="k">class</span> LoggingDomainEventPublisher <span class="k">implements</span> DomainEventPublisher {
+    <span class="k">private static final</span> Logger log = LoggerFactory.getLogger(LoggingDomainEventPublisher.<span class="k">class</span>);
+    <span class="a">@Override</span>
+    <span class="k">public void</span> publish(List&lt;DomainEvent&gt; events) {
+        events.forEach(event -&gt; log.info(<span class="s">"domain event: {}"</span>, event));
+    }
+}</code></pre>
+
+  <h3>How a request flows through them</h3>
+  <p>Below is a sequence diagram showing a <code>POST /api/v1/orders</code> request from browser to database and back. Every arrow is a method call; every lifeline is a class in the repository.</p>
+
+  <figure>
+    <svg viewBox="0 0 820 460" width="820" aria-label="Request sequence diagram">
+      <defs>
+        <marker id="arrs" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" fill="#1a1a1a"/>
+        </marker>
+      </defs>
+
+      <!-- Lifelines -->
+      <g font-family="Inter, sans-serif" font-size="11" font-weight="700">
+        <rect x="20"  y="20" width="100" height="30" fill="#dfeaec" stroke="#1f4a52"/>
+        <text x="70"  y="40" text-anchor="middle" fill="#1f4a52">HTTP client</text>
+        <line x1="70"  y1="50" x2="70"  y2="430" stroke="#9b8d6f" stroke-dasharray="3 3"/>
+
+        <rect x="140" y="20" width="110" height="30" fill="#dfeaec" stroke="#1f4a52"/>
+        <text x="195" y="40" text-anchor="middle" fill="#1f4a52">OrderController</text>
+        <line x1="195" y1="50" x2="195" y2="430" stroke="#9b8d6f" stroke-dasharray="3 3"/>
+
+        <rect x="270" y="20" width="130" height="30" fill="#e2eee2" stroke="#3a5c3a"/>
+        <text x="335" y="40" text-anchor="middle" fill="#3a5c3a">PlaceOrderService</text>
+        <line x1="335" y1="50" x2="335" y2="430" stroke="#9b8d6f" stroke-dasharray="3 3"/>
+
+        <rect x="420" y="20" width="100" height="30" fill="#f1e2e1" stroke="#6b2d2b"/>
+        <text x="470" y="40" text-anchor="middle" fill="#6b2d2b">Order (aggregate)</text>
+        <line x1="470" y1="50" x2="470" y2="430" stroke="#9b8d6f" stroke-dasharray="3 3"/>
+
+        <rect x="540" y="20" width="140" height="30" fill="#dfeaec" stroke="#1f4a52"/>
+        <text x="610" y="40" text-anchor="middle" fill="#1f4a52">OrderPersistenceAdapter</text>
+        <line x1="610" y1="50" x2="610" y2="430" stroke="#9b8d6f" stroke-dasharray="3 3"/>
+
+        <rect x="700" y="20" width="100" height="30" fill="#dfeaec" stroke="#1f4a52"/>
+        <text x="750" y="40" text-anchor="middle" fill="#1f4a52">Event publisher</text>
+        <line x1="750" y1="50" x2="750" y2="430" stroke="#9b8d6f" stroke-dasharray="3 3"/>
+      </g>
+
+      <!-- Interactions -->
+      <g font-family="Inter, sans-serif" font-size="10" fill="#1a1a1a">
+        <line x1="70"  y1="80"  x2="195" y2="80"  stroke="#1a1a1a" marker-end="url(#arrs)"/>
+        <text x="132" y="74" text-anchor="middle">POST /api/v1/orders</text>
+
+        <line x1="195" y1="120" x2="335" y2="120" stroke="#1a1a1a" marker-end="url(#arrs)"/>
+        <text x="265" y="114" text-anchor="middle">place(command)</text>
+
+        <line x1="335" y1="160" x2="470" y2="160" stroke="#1a1a1a" marker-end="url(#arrs)"/>
+        <text x="402" y="154" text-anchor="middle">Order.place(id, lines, clock.now())</text>
+
+        <line x1="470" y1="195" x2="335" y2="195" stroke="#1a1a1a" marker-end="url(#arrs)" stroke-dasharray="2 2"/>
+        <text x="402" y="189" text-anchor="middle" font-style="italic">Order (PLACED, event buffered)</text>
+
+        <line x1="335" y1="235" x2="610" y2="235" stroke="#1a1a1a" marker-end="url(#arrs)"/>
+        <text x="472" y="229" text-anchor="middle">save(order)</text>
+
+        <line x1="610" y1="270" x2="335" y2="270" stroke="#1a1a1a" marker-end="url(#arrs)" stroke-dasharray="2 2"/>
+        <text x="472" y="264" text-anchor="middle" font-style="italic">Order (persisted)</text>
+
+        <line x1="335" y1="310" x2="470" y2="310" stroke="#1a1a1a" marker-end="url(#arrs)"/>
+        <text x="402" y="304" text-anchor="middle">drainEvents()</text>
+
+        <line x1="335" y1="345" x2="750" y2="345" stroke="#1a1a1a" marker-end="url(#arrs)"/>
+        <text x="542" y="339" text-anchor="middle">publish(events)</text>
+
+        <line x1="335" y1="385" x2="195" y2="385" stroke="#1a1a1a" marker-end="url(#arrs)" stroke-dasharray="2 2"/>
+        <text x="265" y="379" text-anchor="middle" font-style="italic">Order</text>
+
+        <line x1="195" y1="420" x2="70"  y2="420" stroke="#1a1a1a" marker-end="url(#arrs)" stroke-dasharray="2 2"/>
+        <text x="132" y="414" text-anchor="middle" font-style="italic">201 Created, OrderResponse</text>
+      </g>
+    </svg>
+    <figcaption><span class="figure-label">Figure 4</span> Place-order request. Solid arrows are calls; dashed arrows are returns.</figcaption>
+  </figure>
+</section>
+
+<section id="lifetime" class="chapter-body">
+  <h2 class="chapter"><span class="numeral">Part&nbsp;Four &middot; VIII</span> Lifetime of a Request</h2>
+  <p class="lede">The sequence diagram in the previous chapter is a static snapshot. This chapter walks the same flow one step at a time, showing exactly what each component does, what it holds, and what it hands off. Use the arrows below to step through.</p>
+
+  <div class="stepper">
+    <div class="stepper-nav">
+      <button class="step-button active"><span class="step-num">Step 01</span><span class="step-label">HTTP request</span></button>
+      <button class="step-button"><span class="step-num">Step 02</span><span class="step-label">Validate DTO</span></button>
+      <button class="step-button"><span class="step-num">Step 03</span><span class="step-label">Controller</span></button>
+      <button class="step-button"><span class="step-num">Step 04</span><span class="step-label">Use case</span></button>
+      <button class="step-button"><span class="step-num">Step 05</span><span class="step-label">Aggregate</span></button>
+      <button class="step-button"><span class="step-num">Step 06</span><span class="step-label">Persist</span></button>
+      <button class="step-button"><span class="step-num">Step 07</span><span class="step-label">Events</span></button>
+      <button class="step-button"><span class="step-num">Step 08</span><span class="step-label">Respond</span></button>
+    </div>
+
+    <div class="step-stage">
+      <div class="step-content active">
+        <h4>Step 1 &middot; HTTP request arrives</h4>
+        <p>A client sends <code>POST /api/v1/orders</code> with a JSON body. Micronaut's Netty-based server, running on a virtual thread, accepts the socket, parses the HTTP envelope, and begins routing.</p>
+<pre><code>POST /api/v1/orders HTTP/1.1
+Content-Type: application/json
+
+{ "lines": [ { "productId": "SKU-100", "quantity": 2,
+               "unitPriceAmount": "19.99", "currencyCode": "USD" } ] }</code></pre>
+      </div>
+
+      <div class="step-content">
+        <h4>Step 2 &middot; Micronaut deserializes and validates the request DTO</h4>
+        <p>The request body is bound to <code>PlaceOrderRequest</code>, a record with Jakarta Validation annotations. If validation fails, Micronaut returns 400 before the controller is ever called.</p>
+<pre><code><span class="k">public record</span> PlaceOrderRequest(<span class="a">@NotEmpty @Valid</span> List&lt;OrderLineRequest&gt; lines) { }
+
+<span class="k">public record</span> OrderLineRequest(<span class="a">@NotBlank</span> String productId,
+                                 <span class="a">@Positive</span> <span class="k">int</span> quantity,
+                                 <span class="a">@NotNull</span> BigDecimal unitPriceAmount,
+                                 <span class="a">@NotBlank</span> String currencyCode) {
+    OrderLineCommand toCommand() {
+        <span class="k">return new</span> OrderLineCommand(productId, quantity, unitPriceAmount, currencyCode);
+    }
+}</code></pre>
+      </div>
+
+      <div class="step-content">
+        <h4>Step 3 &middot; Controller maps the DTO to a command and calls the port</h4>
+        <p>The controller's job is translation: it builds a <code>PlaceOrderCommand</code> and hands it to the inbound port. The controller holds a reference to a <code>PlaceOrderUseCase</code> interface; it does not know (or care) which class implements it.</p>
+<pre><code>List&lt;OrderLineCommand&gt; lines = request.lines().stream()
+    .map(OrderLineRequest::toCommand)
+    .toList();
+Order placed = placeOrder.place(<span class="k">new</span> PlaceOrderCommand(lines));</code></pre>
+      </div>
+
+      <div class="step-content">
+        <h4>Step 4 &middot; The use case builds domain value objects</h4>
+        <p>Inside <code>PlaceOrderService</code>, the command's primitives are promoted to real domain value objects: <code>Money</code>, <code>ProductId</code>, <code>OrderLine</code>. The service also reads the current time through the <code>ClockPort</code>, keeping itself testable with a fixed clock.</p>
+<pre><code>List&lt;OrderLine&gt; lines = command.lines().stream()
+    .map(c -&gt; <span class="k">new</span> OrderLine(ProductId.of(c.productId()), c.quantity(),
+                           <span class="k">new</span> Money(c.unitPriceAmount(), Currency.getInstance(c.currencyCode()))))
+    .toList();
+Order order = Order.place(OrderId.generate(), lines, clock.now());</code></pre>
+      </div>
+
+      <div class="step-content">
+        <h4>Step 5 &middot; The aggregate enforces its invariants</h4>
+        <p>Inside <code>Order.place(...)</code>, the aggregate checks: non-empty lines, consistent currency, non-null arguments. It computes the total, sets its status to <code>PLACED</code>, and buffers an <code>OrderPlaced</code> event. If any check fails, an exception propagates and the save never happens.</p>
+<pre><code>Money total = computeTotal(copy);
+Order order = <span class="k">new</span> Order(id, <span class="k">new</span> ArrayList&lt;&gt;(copy), total, OrderStatus.PLACED, placedAt);
+order.pendingEvents.add(<span class="k">new</span> OrderPlaced(id, total, placedAt));</code></pre>
+      </div>
+
+      <div class="step-content">
+        <h4>Step 6 &middot; The persistence adapter writes to the database</h4>
+        <p>The use case calls <code>orderRepository.save(order)</code>. The implementation (<code>OrderPersistenceAdapter</code>) opens a transaction, maps the aggregate to records, and writes to the <code>orders</code> and <code>order_lines</code> tables. The entire aggregate boundary becomes the transaction boundary.</p>
+<pre><code><span class="a">@Transactional</span>
+<span class="k">public</span> Order save(Order order) {
+    OrderRecord record = mapper.toRecord(order);
+    orders.save(record);
+    <span class="k">for</span> (OrderLineRecord line : mapper.toLineRecords(order)) {
+        lines.save(line);
+    }
+    <span class="k">return</span> order;
+}</code></pre>
+      </div>
+
+      <div class="step-content">
+        <h4>Step 7 &middot; Events are drained and published</h4>
+        <p>Only after the save returns does the use case drain the aggregate's event buffer and hand the events to the publisher. If the save had failed, no event would have been published, and no downstream consumer would believe the order existed.</p>
+<pre><code>Order saved = orderRepository.save(order);
+eventPublisher.publish(saved.drainEvents());</code></pre>
+      </div>
+
+      <div class="step-content">
+        <h4>Step 8 &middot; The response flows back to the client</h4>
+        <p>The use case returns the saved <code>Order</code> to the controller, which wraps it in an <code>OrderResponse</code> DTO and returns <code>HttpResponse.created(...)</code>. Micronaut serializes the response, writes it to the socket, releases the virtual thread, and the request is done.</p>
+<pre><code>HTTP/1.1 201 Created
+Content-Type: application/json
+
+{ "id": "6c1f...",
+  "status": "PLACED",
+  "totalAmount": "39.98",
+  "currency": "USD",
+  "lines": [ ... ],
+  "placedAt": "2026-10-11T09:14:03Z" }</code></pre>
+      </div>
+    </div>
+  </div>
+
+  <h3>What you did not have to think about</h3>
+  <p>Trace the eight steps in your head and notice the absences. The controller never built SQL. The aggregate never asked for the time directly. The use case never looked at an HTTP header. Each class did exactly one job, and the composition of the classes produced the behavior. That is the point of the architecture.</p>
+</section>
+
+<section id="virtual-threads" class="chapter-body">
+  <h2 class="chapter"><span class="numeral">Part&nbsp;Four &middot; IX</span> Virtual Threads</h2>
+  <p class="lede">Java 21 shipped virtual threads under Project Loom. Java 25, which this starter uses, treats them as the default way to run blocking code. This chapter explains what they are, why they matter here, and the exact configuration that turns them on.</p>
+
+  <h3>What virtual threads actually are</h3>
+  <p>A classic Java thread is a thin wrapper around an operating system thread. The OS schedules it, and the JVM pays for the stack. On a typical server you can run perhaps a few thousand of them before context switching and memory pressure degrade the system. That is why "thread per request" fell out of fashion and reactive programming spread.</p>
+  <p>A virtual thread is scheduled by the JVM, not the OS. Its stack is tiny and growable. You can create millions. When a virtual thread performs a blocking I/O call, it unmounts from its carrier platform thread, and the carrier moves on to run another virtual thread. The syscall sleeps, the carrier does not.</p>
+  <p>The practical outcome: imperative, blocking code (<code>repository.save(order)</code>) uses the CPU as efficiently as a reactive pipeline, without the cognitive overhead of callbacks, operators, or <code>Mono</code> and <code>Flux</code> types infecting your signatures.</p>
+
+  <div class="callout">
+    <span class="callout-label">Terminology</span>
+    A <em>carrier thread</em> is a platform (OS) thread owned by the JVM scheduler. A <em>virtual thread</em> runs on top of a carrier when it needs the CPU, and unmounts when it blocks. The JVM maintains a small pool of carriers, roughly equal to the number of CPU cores.
+  </div>
+
+  <h3>Where they are enabled here</h3>
+  <p>Two executors are flipped to virtual in <code>application.yml</code>. One handles Micronaut's event loop blocking offload; the other handles anything the application explicitly dispatches to the blocking executor.</p>
+
+<pre><code>micronaut:
+  application:
+    name: order-service
+  executors:
+    io:
+      virtual: <span class="s">true</span>
+    blocking:
+      virtual: <span class="s">true</span></code></pre>
+  <p class="code-caption">order-bootstrap/src/main/resources/application.yml</p>
+
+  <p>These two toggles replace the fixed-size pools that would otherwise back those executors with virtual-thread executors. The HTTP server, the JDBC repository calls, and any <code>@ExecuteOn(TaskExecutors.BLOCKING)</code> code paths all run on virtual threads.</p>
+
+  <h3>What this changes in the code</h3>
+  <p>Almost nothing. That is the entire point. The <code>PlaceOrderService</code> looks exactly like it would in a Java 8 service: a method that calls other methods. The virtual thread model lets you keep writing that way without paying the historical price.</p>
+
+<pre><code><span class="k">public</span> Order place(PlaceOrderCommand command) {
+    List&lt;OrderLine&gt; lines = command.lines().stream().map(<span class="k">this</span>::toOrderLine).toList();
+    Order order = Order.place(OrderId.generate(), lines, clock.now());
+    Order saved = orderRepository.save(order);          <span class="c">// blocks; virtual thread unmounts</span>
+    eventPublisher.publish(saved.drainEvents());        <span class="c">// may also block</span>
+    <span class="k">return</span> saved;
+}</code></pre>
+  <p>No <code>CompletableFuture</code>. No <code>Mono</code>. No <code>flatMap</code>. The code reads top to bottom and executes the same way. During the two blocking calls, the carrier thread is released to serve another request.</p>
+
+  <h3>Rules of thumb that still apply</h3>
+  <ul>
+    <li><strong>Virtual threads are cheap, not free.</strong> They are perfect for I/O-bound work. CPU-bound work still needs a bounded pool so that one request cannot consume the server.</li>
+    <li><strong>Thread locals leak.</strong> Avoid storing per-request state in <code>ThreadLocal</code>. Prefer <code>ScopedValue</code> (preview in recent JDKs) or explicit parameters.</li>
+    <li><strong>Synchronized blocks pin.</strong> A virtual thread that enters a <code>synchronized</code> section cannot unmount. Prefer <code>ReentrantLock</code>, or keep critical sections short.</li>
+    <li><strong>JDBC drivers vary.</strong> Modern drivers (HikariCP, pg-jdbc, h2) work well with virtual threads; some older ones pin on native sections. Measure before celebrating.</li>
+  </ul>
+
+  <h3>Why this fits a hexagonal architecture</h3>
+  <p>Hexagonal and virtual threads reinforce each other. Hexagonal says: write synchronous, framework-free business code. Virtual threads say: synchronous code scales. The combination gives you an application layer that reads like a specification and performs like a reactive stack, with none of the ceremony of the latter.</p>
+</section>
+
+<section id="archunit" class="chapter-body">
+  <h2 class="chapter"><span class="numeral">Part&nbsp;Four &middot; X</span> Enforcing Architecture with ArchUnit</h2>
+  <p class="lede">An architecture that is only enforced by code review decays. The <code>architecture-tests</code> module turns the rules of this project into executable tests that run on every <code>mvn verify</code>. Breaking a rule fails the build.</p>
+
+  <h3>The idea</h3>
+  <p>ArchUnit is a Java testing library that lets you write assertions over a set of imported classes. "No class in the domain package may depend on a class whose name starts with <code>io.micronaut</code>." "Every class in the application service package must be in a package named <code>service</code>." These are tests in the same JUnit sense as any other, and they appear in the same surefire report.</p>
+
+  <h3>The four rule files</h3>
+  <table>
+    <thead>
+      <tr><th>Rule class</th><th>What it enforces</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>HexagonalArchitectureTest</code></td><td>The onion rule: adapters depend on application, application depends on domain, domain depends on nothing else. Encoded as ArchUnit's <code>onionArchitecture()</code> DSL.</td></tr>
+      <tr><td><code>DomainPurityTest</code></td><td>Four rules on the domain package: no Micronaut, Netty, or Reactive types; no Jakarta or Javax framework types; no JDBC, Flyway, or SQL types; no application or adapter imports.</td></tr>
+      <tr><td><code>ApplicationLayerTest</code></td><td>No adapter dependencies, no framework dependencies (beyond the few allowed), naming conventions on use cases and services.</td></tr>
+      <tr><td><code>AdapterIsolationTest</code></td><td>Inbound adapters cannot import outbound adapters, and vice versa. Controllers live in the controller package, repositories in the repository package.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Reading a rule</h3>
+  <p>The onion rule reads almost like English:</p>
+
+<pre><code>onionArchitecture()
+    .domainModels(DOMAIN + <span class="s">".."</span>)
+    .applicationServices(APPLICATION + <span class="s">".."</span>)
+    .adapter(<span class="s">"rest"</span>, ADAPTER_REST + <span class="s">".."</span>)
+    .adapter(<span class="s">"persistence"</span>, ADAPTER_PERSISTENCE + <span class="s">".."</span>)
+    .adapter(<span class="s">"time"</span>, BOOTSTRAP + <span class="s">".adapter.time.."</span>)
+    .adapter(<span class="s">"eventing"</span>, BOOTSTRAP + <span class="s">".adapter.eventing.."</span>)
+    .adapter(<span class="s">"bootstrap"</span>, BOOTSTRAP + <span class="s">".."</span>)
+    .check(ALL_CLASSES);</code></pre>
+  <p>If a controller imports an entity from the persistence package, this rule fails with a clear message naming the offending class and the forbidden import. No warning. No code review. Build fails.</p>
+
+  <h3>Keeping generated classes out of the picture</h3>
+  <p>Micronaut's annotation processor generates synthetic classes (<code>$Order$Introspection</code>, <code>$OrderController$Definition</code>) that would otherwise fail the onion rule for perfectly good reasons. A tiny <code>ImportOption</code> filters them out:</p>
+
+<pre><code><span class="k">public class</span> DoNotIncludeGeneratedClasses <span class="k">implements</span> ImportOption {
+    <span class="a">@Override</span>
+    <span class="k">public boolean</span> includes(Location location) {
+        String uri = location.asURI().toString();
+        <span class="k">return</span> !uri.contains(<span class="s">"/$"</span>) &amp;&amp; !uri.contains(<span class="s">"$$"</span>);
+    }
+}</code></pre>
+
+  <h3>The meta-test</h3>
+  <p>How do we know the rules are not vacuously passing? There is a fixture package of deliberately broken classes and a meta-test that feeds just those classes into each rule, asserting the rules reject them.</p>
+
+<pre><code><span class="a">@Test</span>
+<span class="k">void</span> domainPurityRejectsFrameworkImports() {
+    JavaClasses onlyFixtures = <span class="k">new</span> ClassFileImporter()
+        .importPackages(<span class="s">"com.enterprise.starter.architecture.violationfixture"</span>);
+
+    assertThatThrownBy(() -&gt; DomainPurityTest.NO_FRAMEWORK.check(onlyFixtures))
+        .isInstanceOf(AssertionError.<span class="k">class</span>);
+}</code></pre>
+  <p>If someone accidentally weakens a rule such that it no longer catches a known violation, the meta-test fails. The rules check the code, and the meta-test checks the rules.</p>
+
+  <h3>What the surefire report looks like on a bad commit</h3>
+  <div class="compare">
+    <div class="side wrong">
+      <h5>A controller imports an entity</h5>
+<pre><code>Architecture Violation [Priority: MEDIUM]
+Rule 'onion architecture consisting of
+   library ("rest" com.enterprise.starter.order.adapter.rest..),
+   ...was violated (1 times):
+Class &lt;OrderController&gt; depends on class &lt;OrderRecord&gt; in
+    (OrderController.java:42)</code></pre>
+    </div>
+    <div class="side right">
+      <h5>After the fix</h5>
+<pre><code>[INFO] Tests run: 28, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS</code></pre>
+    </div>
+  </div>
+
+  <h3>Why this changes behavior over months</h3>
+  <p>A rule that fails the build teaches faster than a lint warning or a review comment. A new engineer who writes a shortcut sees the build go red before they open a pull request. By the second or third encounter, the rule is internalized. The architecture becomes a habit instead of a document.</p>
+</section>
+
+<section id="exercises" class="chapter-body">
+  <h2 class="chapter"><span class="numeral">Part&nbsp;Five &middot; XI</span> Exercises</h2>
+  <p class="lede">Reading is passive. Working the code is how the patterns settle. Below are ten exercises in increasing difficulty. Each one is phrased as a change to the repository with a clear end state. Attempt them in order.</p>
+
+<details class="reveal">
+    <summary>Exercise 1 &middot; Add a ship transition to the Order aggregate</summary>
+    <div class="body">
+      <p>Add a <code>ship(Instant shippedAt)</code> method on <code>Order</code> that transitions a <code>PLACED</code> order to <code>SHIPPED</code> and records an <code>OrderShipped</code> event. Add unit tests covering: successful shipment, double-ship rejection, cancellation-after-ship rejection.</p>
+      <p><strong>Done when:</strong> <code>mvn -pl order-domain test</code> passes with your new tests, and the existing <code>cancel</code> behavior rejects a shipped order.</p>
+    </div>
+  </details>
+
+  <details class="reveal">
+    <summary>Exercise 2 &middot; Expose the ship transition over HTTP</summary>
+    <div class="body">
+      <p>Add a <code>ShipOrderUseCase</code> inbound port, implement it in a <code>ShipOrderService</code>, add a wiring entry in <code>UseCaseConfiguration</code>, and expose <code>POST /api/v1/orders/{id}/ship</code>. Return <code>409 Conflict</code> for invalid state via the existing exception handler.</p>
+      <p><strong>Done when:</strong> an integration test POSTs to the ship endpoint and asserts the resulting <code>OrderResponse</code> has status <code>SHIPPED</code>.</p>
+    </div>
+  </details>
+
+  <details class="reveal">
+    <summary>Exercise 3 &middot; Replace LoggingDomainEventPublisher with an in-memory recorder</summary>
+    <div class="body">
+      <p>Create a second <code>DomainEventPublisher</code> implementation that stores events in a <code>CopyOnWriteArrayList</code>, selectable by a Micronaut condition on an environment. Use it in integration tests to assert exact event sequences.</p>
+      <p><strong>Done when:</strong> an integration test places an order, drains the recorder, and asserts a single <code>OrderPlaced</code> event with the correct total.</p>
+    </div>
+  </details>
+
+  <details class="reveal">
+    <summary>Exercise 4 &middot; Add a cancellation reason catalogue</summary>
+    <div class="body">
+      <p>Introduce a <code>CancellationReason</code> enum in the domain with values <code>CUSTOMER_REQUEST</code>, <code>PAYMENT_FAILURE</code>, <code>FRAUD</code>. Change <code>cancel</code> to take the enum. Update the command, request DTO, and tests. Keep the architecture tests green.</p>
+      <p><strong>Done when:</strong> the request body for cancel accepts a reason code string and the domain refuses unknown values at the DTO boundary.</p>
+    </div>
+  </details>
+
+  <details class="reveal">
+    <summary>Exercise 5 &middot; Enforce "no setters on domain entities"</summary>
+    <div class="body">
+      <p>Add a new rule in <code>DomainPurityTest</code> that fails if any public method on a domain class is named <code>set*</code>. Confirm it catches a deliberately added setter (then remove the setter). This is one line of ArchUnit and a thirty-second feedback loop.</p>
+    </div>
+  </details>
+
+  <details class="reveal">
+    <summary>Exercise 6 &middot; Pagination on list orders</summary>
+    <div class="body">
+      <p>Add a <code>findAll(int offset, int limit)</code> method to <code>OrderRepository</code>, a <code>ListOrdersUseCase</code>, and <code>GET /api/v1/orders?offset=&amp;limit=</code>. Validate limits, cap them, and return a response envelope with pagination metadata.</p>
+    </div>
+  </details>
+
+  <details class="reveal">
+    <summary>Exercise 7 &middot; Replace H2 with PostgreSQL in dev</summary>
+    <div class="body">
+      <p>Use Docker Compose to run PostgreSQL locally. Update <code>application-dev.yml</code> to point at it. Confirm the Flyway migration runs clean. Confirm all integration tests pass against both H2 (CI) and PostgreSQL (dev) without code changes.</p>
+      <p><strong>Payoff:</strong> you have now proven the persistence port's abstraction holds across engines.</p>
+    </div>
+  </details>
+
+  <details class="reveal">
+    <summary>Exercise 8 &middot; Swap the REST adapter for gRPC</summary>
+    <div class="body">
+      <p>Create a new module <code>order-adapter-grpc</code>. Add a proto file for the three operations. Implement a service class that depends on the same inbound ports. Wire it in bootstrap behind a profile. Do not touch application or domain code.</p>
+      <p><strong>Payoff:</strong> you now have two inbound adapters serving the same application layer. This is the hexagonal promise, tested.</p>
+    </div>
+  </details>
+
+  <details class="reveal">
+    <summary>Exercise 9 &middot; Introduce a second bounded context</summary>
+    <div class="body">
+      <p>Fork <code>order-domain</code>, <code>order-application</code>, and so on into a <code>fulfilment-*</code> set of modules. Give it a <code>Shipment</code> aggregate with its own state machine. Add an <code>OrderShippedListener</code> in the fulfilment context that reacts to <code>OrderShipped</code>. Keep the two contexts' domain packages non-overlapping.</p>
+    </div>
+  </details>
+
+  <details class="reveal">
+    <summary>Exercise 10 &middot; Outbox-based event publication</summary>
+    <div class="body">
+      <p>Replace the current publisher with an outbox implementation: inside the same transaction as the aggregate save, insert the events into an <code>order_outbox</code> table. A separate scheduled process reads unpublished rows, delivers them to Kafka, and marks them published. Prove transactional consistency with a test that fails the Kafka call and asserts no gap.</p>
+      <p><strong>Payoff:</strong> you now understand why the aggregate buffers events and why the use case drains them after save and not during.</p>
+    </div>
+  </details>
+</section>
+
+<section id="glossary" class="chapter-body">
+  <h2 class="chapter"><span class="numeral">Part&nbsp;Five &middot; XII</span> Glossary</h2>
+  <p class="lede">A short, opinionated dictionary. Each entry is phrased the way it is used in this repository, which is not always how the original texts define it.</p>
+
+  <dl class="glossary">
+    <dt>Adapter</dt>
+    <dd>A class that translates between the outside world and an application port. Inbound adapters call a port; outbound adapters implement a port.</dd>
+
+    <dt>Aggregate</dt>
+    <dd>A cluster of domain objects treated as a single unit for consistency. One entity in the cluster is the root; all mutations flow through it.</dd>
+
+    <dt>Application layer</dt>
+    <dd>The module containing use case interfaces, their implementations, and the inbound and outbound ports. Orchestrates the domain. Contains no business rules of its own.</dd>
+
+    <dt>ArchUnit</dt>
+    <dd>A Java library for writing architecture rules as JUnit tests. Used in this repo to enforce the dependency rule, naming conventions, and layer isolation.</dd>
+
+    <dt>Bounded context</dt>
+    <dd>A region of a business where words have one agreed meaning. Usually one deployable service and one module tree. This project is one bounded context: Order Management.</dd>
+
+    <dt>Command</dt>
+    <dd>An immutable value that carries the input for one use case. Lives in the application layer, between the inbound adapter and the use case.</dd>
+
+    <dt>Composition root</dt>
+    <dd>The one place in the application where concrete classes are wired together into an object graph. Here, the <code>order-bootstrap</code> module.</dd>
+
+    <dt>Dependency rule</dt>
+    <dd>Source-code dependencies may only point inward. The single rule that governs hexagonal, onion, and clean architectures.</dd>
+
+    <dt>Domain</dt>
+    <dd>The subject of the software. For this project, the domain is placing and cancelling orders. Everything else is machinery to serve it.</dd>
+
+    <dt>Domain event</dt>
+    <dd>A past-tense fact emitted by an aggregate when something significant happens. Immutable. Named in the business's language.</dd>
+
+    <dt>Entity</dt>
+    <dd>A domain object with an identity that persists across state changes. Not interchangeable with another instance that happens to have the same fields.</dd>
+
+    <dt>Hexagonal architecture</dt>
+    <dd>Alistair Cockburn's name for the ports-and-adapters pattern. The hexagon shape is incidental; the dependency rule is the point.</dd>
+
+    <dt>Inbound port</dt>
+    <dd>An interface the application exposes to the outside world. Called by inbound adapters. Here: the <code>*UseCase</code> interfaces.</dd>
+
+    <dt>Onion architecture</dt>
+    <dd>Jeffrey Palermo's circular drawing of the same dependency rule. ArchUnit's DSL calls the pattern <code>onionArchitecture()</code>.</dd>
+
+    <dt>Outbound port</dt>
+    <dd>An interface the application declares to describe what it needs from the outside world. Implemented by outbound adapters. Here: <code>OrderRepository</code>, <code>DomainEventPublisher</code>, <code>ClockPort</code>.</dd>
+
+    <dt>Port</dt>
+    <dd>Any interface the application owns to define a boundary. Both inbound and outbound ports are ports.</dd>
+
+    <dt>Repository</dt>
+    <dd>An abstraction that behaves like an in-memory collection of aggregates. The application uses one; an adapter implements it against a real datastore.</dd>
+
+    <dt>Ubiquitous language</dt>
+    <dd>A shared vocabulary between developers and domain experts, reflected directly in the code. If the business says "place an order", so does the method.</dd>
+
+    <dt>Use case</dt>
+    <dd>One business intention, modelled as an interface in the application layer. A <code>PlaceOrderService</code> implements <code>PlaceOrderUseCase</code>.</dd>
+
+    <dt>Value object</dt>
+    <dd>An immutable object defined by its attributes. Two instances with equal attributes are the same object. Java records fit perfectly.</dd>
+
+    <dt>Virtual thread</dt>
+    <dd>A JVM-scheduled thread with a tiny, growable stack. Project Loom's answer to the thread-per-request versus reactive dilemma. Default in Java 21+.</dd>
+  </dl>
+</section>
+
+<section id="colophon" class="chapter-body colophon">
+  <h2 class="chapter"><span class="numeral">End</span> Colophon</h2>
+  <p>This document was set in Charter for body text, Inter for interface elements, and JetBrains Mono for code. Chapter numerals use small caps. Figures were drawn as inline SVG so the document remains a single file.</p>
+  <p>The project it describes is a working Micronaut 4 service built on Java 25 with virtual threads. All code excerpts are quoted verbatim from the repository you are reading from. Nothing is pseudocode.</p>
+  <p>If a passage is unclear, open the source. If the source disagrees with the passage, the source is correct. Pull requests on either are welcome.</p>
+  <p class="colophon-end">&middot; &middot; &middot;</p>
+</section>
+
+  </main>
+</div>
+<script>
+// ========== Scroll-spy navigation ==========
+(function() {
+  const links = document.querySelectorAll('.sidebar nav a');
+  const sections = Array.from(links)
+    .map(a => document.querySelector(a.getAttribute('href')))
+    .filter(Boolean);
+
+  function onScroll() {
+    const scrollPos = window.scrollY + 120;
+    let activeId = null;
+    for (const section of sections) {
+      if (section.offsetTop <= scrollPos) activeId = section.id;
+    }
+    links.forEach(a => {
+      a.classList.toggle('active', a.getAttribute('href') === '#' + activeId);
+    });
+  }
+  document.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+
+// ========== Tabs ==========
+document.querySelectorAll('.tabs').forEach(tabs => {
+  const buttons = tabs.querySelectorAll('.tab');
+  const panels = tabs.querySelectorAll('.tab-panel');
+  buttons.forEach((btn, i) => {
+    btn.addEventListener('click', () => {
+      buttons.forEach(b => b.classList.remove('active'));
+      panels.forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      panels[i].classList.add('active');
+    });
+  });
+});
+
+// ========== Stepper ==========
+document.querySelectorAll('.stepper').forEach(stepper => {
+  const buttons = stepper.querySelectorAll('.step-button');
+  const contents = stepper.querySelectorAll('.step-content');
+  buttons.forEach((btn, i) => {
+    btn.addEventListener('click', () => {
+      buttons.forEach(b => b.classList.remove('active'));
+      contents.forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      contents[i].classList.add('active');
+    });
+  });
+});
+
+// ========== Interactive hexagon ==========
+document.querySelectorAll('.hex-interactive').forEach(svg => {
+  const detail = document.querySelector('#' + svg.dataset.detail);
+  if (!detail) return;
+  const defaultTitle = detail.querySelector('h5').textContent;
+  const defaultText = detail.querySelector('p').textContent;
+  const layers = svg.querySelectorAll('g.layer');
+
+  layers.forEach(layer => {
+    layer.addEventListener('mouseenter', () => {
+      layers.forEach(l => l.classList.toggle('dimmed', l !== layer));
+      detail.querySelector('h5').textContent = layer.dataset.title;
+      detail.querySelector('p').textContent = layer.dataset.description;
+      detail.style.borderLeftColor = layer.dataset.color;
+    });
+  });
+  svg.addEventListener('mouseleave', () => {
+    layers.forEach(l => l.classList.remove('dimmed'));
+    detail.querySelector('h5').textContent = defaultTitle;
+    detail.querySelector('p').textContent = defaultText;
+    detail.style.borderLeftColor = 'var(--accent-burgundy)';
+  });
+});
+</script>
+</body>
+</html>

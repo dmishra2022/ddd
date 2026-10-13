@@ -1,0 +1,11 @@
+datasources:
+  default:
+    # Operators supply JDBC_URL / JDBC_USER / JDBC_PASSWORD via secrets.
+    url: ${JDBC_URL}
+    username: ${JDBC_USER}
+    password: ${JDBC_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    dialect: POSTGRES
+    schema-generate: NONE
+    maximum-pool-size: ${JDBC_POOL_MAX:20}
+    minimum-idle: ${JDBC_POOL_MIN:5}

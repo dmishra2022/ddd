@@ -1,0 +1,36 @@
+schemaVersion: 1
+
+# Only own-code is analysed. Third-party and generated-but-irrelevant packages are
+# outside the roots so they are ignored by the importer.
+roots:
+  - "com.enterprise.starter.order.."
+
+profiles: [hexagonal, ddd]
+
+roles:
+  DOMAIN:
+    - "com.enterprise.starter.order.domain.."
+  APPLICATION:
+    - "com.enterprise.starter.order.application.service.."
+    - "com.enterprise.starter.order.application.command.."
+  INBOUND_PORT:
+    - "com.enterprise.starter.order.application.port.in.."
+  OUTBOUND_PORT:
+    - "com.enterprise.starter.order.application.port.out.."
+  INBOUND_ADAPTER:
+    - "com.enterprise.starter.order.adapter.inbound.."
+  OUTBOUND_ADAPTER:
+    - "com.enterprise.starter.order.adapter.outbound.."
+  COMPOSITION_ROOT:
+    - "com.enterprise.starter.order.bootstrap.."
+
+contexts:
+  - id: order
+    packages: ["com.enterprise.starter.order.."]
+    # Only the REST transport contract is a legitimate cross-context entry point; the
+    # core and adapters stay internal to the bounded context.
+    exposedPackages: ["com.enterprise.starter.order.adapter.inbound.rest.."]
+
+requireClassification: true
+failOn: ERROR
+newOnly: false

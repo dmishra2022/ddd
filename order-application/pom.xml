@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.enterprise.starter</groupId>
+        <artifactId>order-management-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>order-application</artifactId>
+    <name>Order Management :: Application</name>
+    <description>
+        Use-case orchestration: inbound and outbound ports, application services,
+        commands/queries. Depends only on the domain layer.
+    </description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.enterprise.starter</groupId>
+            <artifactId>order-domain</artifactId>
+        </dependency>
+
+        <!--
+            No DI-container dependency. Use case services are plain Java classes;
+            they are wired as beans by a Micronaut @Factory in the bootstrap module.
+            Keeping the application module framework-agnostic is enforced by ArchUnit.
+        -->
+
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

@@ -1,0 +1,13 @@
+datasources:
+  default:
+    url: "jdbc:h2:mem:orders-dev;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1"
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+    dialect: POSTGRES
+    schema-generate: NONE
+
+logger:
+  levels:
+    com.enterprise.starter.order: DEBUG
+    io.micronaut.data.query: DEBUG
